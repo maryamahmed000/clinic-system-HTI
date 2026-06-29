@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>لوحة الإدارة — نظام العيادة</title>
+<link rel="stylesheet" href="/static/theme.css">
+<style>
+body{display:flex;min-height:100vh;}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl;}
+::-webkit-scrollbar{width:6px;} ::-webkit-scrollbar-track{background:var(--bg-card);} ::-webkit-scrollbar-thumb{background:var(--border-dark);border-radius:3px;}
+
+.sidebar{width:220px;background:var(--bg-card);border-left:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:fixed;right:0;top:0;bottom:0;}
+.logo{padding:0 20px 24px;border-bottom:1px solid var(--border);}
+.logo-icon{width:44px;height:44px;background:linear-gradient(135deg,#FF6B6B,#CC4040);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:10px;}
+.logo-text{font-size:14px;font-weight:700;color:#fff;}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px;}
+.nav{padding:16px 0;flex:1;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 20px;cursor:pointer;margin:2px 10px;border-radius:8px;text-decoration:none;}
+.nav-item:hover{background:var(--border);}
+.nav-item.active{background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.25);}
+.nav-icon{font-size:16px;color:var(--text-muted);width:20px;text-align:center;}
+.nav-item.active .nav-icon,.nav-item.active .nav-label{color:#FF6B6B;font-weight:600;}
+.nav-label{font-size:13px;color:var(--text-secondary);font-weight:500;}
+.sidebar-footer{padding:16px 20px;border-top:1px solid var(--border);}
+
+.main{flex:1;margin-right:220px;display:flex;flex-direction:column;}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:5;}
+.topbar-title{font-size:18px;font-weight:700;color:var(--text-primary);}
+.topbar-sub{font-size:12px;color:#FF6B6B;margin-top:2px;}
+.warn-chip{background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.3);color:#FF6B6B;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;}
+
+.content{flex:1;padding:28px 32px;}
+.section-title{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:1px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.section-title::before{content:'';width:3px;height:12px;background:#FF6B6B;border-radius:2px;}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px;}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;}
+.stat-icon{font-size:22px;margin-bottom:8px;}
+.stat-num{font-size:28px;font-weight:900;color:var(--text-primary);}
+.stat-label{font-size:11px;color:var(--text-muted);margin-top:4px;}
+
+/* Visits table */
+.table-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:24px;}
+.table-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;}
+.field{background:var(--bg-card);border:1.5px solid var(--border);border-radius:9px;padding:8px 14px;font-size:13px;color:var(--text-primary);outline:none;font-family:inherit;}
+.field:focus{border-color:#FF6B6B;}
+.btn{padding:8px 18px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid;font-family:inherit;}
+.btn-danger{background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.4);color:#FF6B6B;}
+.btn-danger:hover{background:rgba(255,107,107,.2);}
+.btn-danger-solid{background:#FF6B6B;border-color:#FF6B6B;color:#fff;}
+.btn-danger-solid:hover{background:#CC4040;}
+.btn-outline{background:transparent;border-color:var(--border);color:var(--text-secondary);}
+.btn-outline:hover{border-color:var(--text-muted);}
+.btn-teal{background:rgba(0,201,167,.1);border-color:rgba(0,201,167,.3);color:#00C9A7;}
+.btn-select-all{background:rgba(255,184,48,.08);border-color:rgba(255,184,48,.3);color:#FFB830;}
+
+table{width:100%;border-collapse:collapse;table-layout:fixed;}
+colgroup col:nth-child(1){width:36px;}
+colgroup col:nth-child(2){width:28%;}
+colgroup col:nth-child(3){width:10%;}
+colgroup col:nth-child(4){width:100px;}
+colgroup col:nth-child(5){width:15%;}
+colgroup col:nth-child(6){width:18%;}
+colgroup col:nth-child(7){width:70px;}
+colgroup col:nth-child(8){width:90px;}
+colgroup col:nth-child(9){width:55px;}
+thead th{font-size:11px;color:var(--text-muted);font-weight:700;letter-spacing:.5px;padding:10px 12px;text-align:right;border-bottom:2px solid var(--border);background:#0D1B27;white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--bg-hover);transition:background .15s;}
+tbody tr:hover{background:var(--bg-hover);}
+tbody td{padding:10px 12px;font-size:12px;color:var(--text-secondary);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.td-name{font-weight:700;color:var(--text-primary);}
+.td-id{color:#00C9A7;font-size:14px;font-weight:700;}
+.td-diag{color:var(--text-secondary);}
+.td-date{color:var(--text-secondary);}
+.tag{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700;}
+.t-amber{background:rgba(255,184,48,.1);color:#FFB830;border:1px solid rgba(255,184,48,.2);}
+.t-red{background:rgba(255,107,107,.1);color:#FF6B6B;border:1px solid rgba(255,107,107,.2);}
+.t-teal{background:rgba(0,201,167,.1);color:#00C9A7;border:1px solid rgba(0,201,167,.2);}
+.t-gray{background:var(--border);color:var(--text-muted);}
+.cb{width:15px;height:15px;accent-color:#FF6B6B;cursor:pointer;}
+.del-btn{padding:5px 12px;border-radius:7px;border:1px solid rgba(255,107,107,.3);background:transparent;color:#FF6B6B;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+.del-btn:hover{background:rgba(255,107,107,.15);}
+
+/* Confirm modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100;display:none;}
+.modal{background:#fff;border:1px solid #FF6B6B;border-radius:16px;padding:28px;max-width:420px;width:90%;text-align:center;}
+.modal-icon{font-size:40px;margin-bottom:14px;}
+.modal-title{font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:8px;}
+.modal-sub{font-size:13px;color:var(--text-secondary);margin-bottom:22px;line-height:1.6;}
+.modal-btns{display:flex;gap:10px;justify-content:center;}
+
+/* Medicine stock editor */
+.med-table-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:22px;}
+.stock-input{width:70px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--text-primary);text-align:center;font-family:inherit;}
+.stock-input:focus{border-color:#00C9A7;outline:none;}
+.save-stock-btn{padding:5px 12px;border-radius:6px;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.3);color:#00C9A7;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+.save-stock-btn:hover{background:rgba(0,201,167,.2);}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;display:none;z-index:999;color:#fff;}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">⚙️</div>
+    <div class="logo-text">لوحة الإدارة</div>
+    <div class="logo-sub">Admin Panel</div>
+  </div>
+  <nav class="nav">
+    <a href="/admin" class="nav-item active"><span class="nav-icon">🗑️</span><span class="nav-label">إدارة الزيارات</span></a>
+    <a href="/admin/medicines" class="nav-item"><span class="nav-icon">💊</span><span class="nav-label">إدارة الأدوية</span></a>
+    <div style="height:1px;background:var(--border);margin:12px 20px;"></div>
+    <a href="/doctor" class="nav-item"><span class="nav-icon">🏥</span><span class="nav-label">العياده</span></a>
+    <a href="/affairs" class="nav-item"><span class="nav-icon">🏛️</span><span class="nav-label">شئون الطلاب</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <div style="font-size:11px;color:var(--text-muted);text-align:center;">⚠️ صفحة مقيدة بالمدير</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">⚙️ لوحة الإدارة</div>
+      <div class="topbar-sub">Admin Panel — إدارة البيانات والتست</div>
+    </div>
+    <div class="warn-chip">⚠️ Admin Only</div>
+  </div>
+
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon">📋</div>
+        <div class="stat-num" id="s-visits">{{ stats.total_visits }}</div>
+        <div class="stat-label">إجمالي الزيارات</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📤</div>
+        <div class="stat-num" id="s-submitted">{{ stats.submitted }}</div>
+        <div class="stat-label">أُرسل لشئون</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📄</div>
+        <div class="stat-num" id="s-reports">{{ stats.affairs_reports }}</div>
+        <div class="stat-label">تقارير شئون</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">💊</div>
+        <div class="stat-num">{{ stats.medicines }}</div>
+        <div class="stat-label">أصناف الأدوية</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📧</div>
+        <div class="stat-num" style="color:#6D28D9;">{{ stats.emails_sent }}</div>
+        <div class="stat-label">إيميلات مُرسَلة</div>
+      </div>
+    </div>
+
+    <!-- Visits management -->
+    <div class="table-card">
+      <div class="section-title">إدارة الزيارات — حذف بيانات التست</div>
+      <div class="table-toolbar">
+        <input class="field" id="search-visits" placeholder="🔍 بحث بالاسم أو الـ ID..." oninput="filterVisits()" style="flex:1;max-width:280px;">
+        <select class="field" id="filter-type" onchange="filterVisits()">
+          <option value="">كل الأنواع</option>
+          <option value="student">طلاب</option>
+          <option value="employee">موظفين</option>
+        </select>
+        <span style="font-size:11px;color:var(--text-muted);">اضغط 🗑️ بجانب أي زيارة لحذفها</span>
+      </div>
+
+      <table id="visits-table">
+        <colgroup>
+          <col><col><col><col><col><col><col><col><col>
+        </colgroup>
+        <thead>
+          <tr>
+            <th width="30"></th>
+            <th style="width:36px;">#</th>
+            <th style="width:22%;">الاسم</th>
+            <th style="width:10%;">ID / رقم الملف</th>
+            <th style="width:110px;">التاريخ</th>
+            <th style="width:16%;">الطبيب</th>
+            <th style="width:18%;">التشخيص</th>
+            <th style="width:80px;">الإجازة</th>
+            <th style="width:90px;">الحالة</th>
+            <th style="width:60px;">حذف</th>
+          </tr>
+        </thead>
+        <tbody id="visits-tbody">
+          {% for v in visits %}
+          <tr id="row-{{ v.id }}" data-name="{{ v.person_name }}" data-id="{{ v.person_id }}" data-type="{{ v.person_type }}">
+            <td style="width:36px;color:var(--text-muted);font-size:11px;text-align:center;">{{ v.id }}</td>
+            <td class="td-name" style="width:22%;max-width:0;">{{ v.person_name }}</td>
+            <td class="td-id" style="width:10%;max-width:0;">{{ v.person_id }}</td>
+            <td class="td-date" style="width:100px;">{{ v.visit_date }}</td>
+            <td style="width:16%;max-width:0;font-size:12px;color:#7B61FF;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ v.doctor_name or '—' }}</td>
+            <td class="td-diag" style="width:18%;max-width:0;" title="{{ v.diagnosis }}">{{ v.diagnosis or '—' }}</td>
+            <td>
+              {% if v.leave_days and v.leave_days > 0 %}
+                <span class="tag t-amber">{{ v.leave_days }} أيام</span>
+              {% else %}
+                <span class="tag t-gray">بدون</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if v.submitted_to_affairs %}
+                <span class="tag t-teal">أُرسل ✓</span>
+              {% else %}
+                <span class="tag t-gray">محلي</span>
+              {% endif %}
+              {% if v.is_chronic %}
+                <span class="tag t-red">مزمن</span>
+              {% endif %}
+            </td>
+            <td>
+              <button class="del-btn" onclick="showDeleteOne({{ v.id }}, '{{ v.person_name }}')">🗑️</button>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-muted);">لا توجد زيارات</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Email Log Section -->
+    <div class="table-card">
+      <div class="section-title">سجل الإيميلات المُرسَلة</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px;">#</th>
+            <th style="width:22%;">الطالب</th>
+            <th style="width:10%;">رقم التقرير</th>
+            <th>إلى (إيميلات)</th>
+            <th style="width:16%;">أُرسل بواسطة</th>
+            <th style="width:110px;">التاريخ والوقت</th>
+            <th style="width:90px;">الحالة</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in email_logs %}
+          <tr>
+            <td style="color:var(--text-muted);font-size:11px;">{{ log.id }}</td>
+            <td class="td-name">{{ log.person_name }} <span style="color:var(--text-muted);font-size:10px;">({{ log.person_id }})</span></td>
+            <td style="color:#1B3A6B;font-weight:700;font-size:12px;">{{ log.report_number }}</td>
+            <td style="font-size:11px;color:var(--text-secondary);">
+              {% set emails = log.to_emails | fromjson %}
+              {{ emails | join('، ') }}
+            </td>
+            <td style="font-size:12px;color:#6D28D9;font-weight:600;">{{ log.sent_by }}</td>
+            <td class="td-date">{{ log.sent_at[:16].replace('T',' ') if log.sent_at else '—' }}</td>
+            <td>
+              {% if log.status == 'success' %}
+                <span class="tag t-teal">✅ تم</span>
+              {% else %}
+                <span class="tag t-red" title="{{ log.error_message }}">❌ فشل</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);">لا توجد إيميلات مُرسَلة حتى الآن</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Delete one modal -->
+<div class="modal-bg" id="modal-one">
+  <div class="modal">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">تأكيد الحذف</div>
+    <div class="modal-sub" id="modal-one-text">هل أنت متأكد من حذف زيارة <b></b>؟<br>لا يمكن التراجع.</div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeModals()">إلغاء</button>
+      <button class="btn btn-danger-solid" id="confirm-del-one">نعم، احذف</button>
+    </div>
+  </div>
+</div>
+
+
+
+<div class="toast" id="toast"></div>
+
+<script>
+let deleteOneId = null;
+
+function filterVisits() {
+  const q = document.getElementById('search-visits').value.toLowerCase();
+  const type = document.getElementById('filter-type').value;
+  document.querySelectorAll('#visits-tbody tr[id]').forEach(row => {
+    const name = row.dataset.name?.toLowerCase() || '';
+    const id = row.dataset.id?.toLowerCase() || '';
+    const rtype = row.dataset.type || '';
+    const matchQ = !q || name.includes(q) || id.includes(q);
+    const matchT = !type || rtype === type;
+    row.style.display = (matchQ && matchT) ? '' : 'none';
+  });
+}
+
+function showDeleteOne(id, name) {
+  deleteOneId = id;
+  document.getElementById('modal-one-text').innerHTML = 
+    `هل أنت متأكد من حذف زيارة <b style="color:var(--text-primary);">${name}</b>؟<br><span style="color:#FF6B6B;">لا يمكن التراجع.</span>`;
+  document.getElementById('confirm-del-one').onclick = () => doDeleteOne(id);
+  document.getElementById('modal-one').style.display = 'flex';
+}
+
+function closeModals() {
+  document.querySelectorAll('.modal-bg').forEach(m => m.style.display = 'none');
+}
+
+async function doDeleteOne(id) {
+  closeModals();
+  const res = await fetch(`/admin/delete_visit/${id}`, {method:'DELETE'});
+  const data = await res.json();
+  if (data.success) {
+    document.getElementById(`row-${id}`)?.remove();
+    updateStats(-1);
+    showToast('✅ تم حذف الزيارة');
+  } else {
+    showToast('❌ خطأ: ' + data.error, '#FF6B6B');
+  }
+}
+
+function updateStats(delta) {
+  const el = document.getElementById('s-visits');
+  el.textContent = Math.max(0, parseInt(el.textContent) + delta);
+}
+
+function showToast(msg, color='#00C9A7') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = color;
+  t.style.display = 'block';
+  setTimeout(()=> t.style.display='none', 3000);
+}
+
+// Close modal on bg click
+document.getElementById('modal-one').addEventListener('click', e => { if(e.target===document.getElementById('modal-one')) closeModals(); });
+</script>
+</body>
+</html>

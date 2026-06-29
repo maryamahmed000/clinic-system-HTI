@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>تقرير شئون الطلاب — {{ report.report_number }}</title>
+<style>
+  @page { size: A4 portrait; margin: 18mm 22mm 18mm 22mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Times New Roman','Arial',serif; direction: rtl; background:#fff; color:#000; font-size:13pt; line-height:1.5; }
+
+  /* HEADER */
+  .header { display:flex; justify-content:space-between; align-items:center; border-bottom:2.5px solid #000; padding-bottom:12px; margin-bottom:20px; }
+  .hdr-ar { text-align:right; }
+  .hdr-ar .name  { font-size:17pt; font-weight:bold; }
+  .hdr-ar .sub   { font-size:11pt; margin-top:3px; }
+  .hdr-ar .sub2  { font-size:10pt; color:#444; margin-top:2px; }
+  .hdr-logo { width:80px; height:80px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .hdr-en { text-align:left; }
+  .hdr-en .name  { font-size:13pt; font-weight:bold; }
+  .hdr-en .sub   { font-size:9.5pt; margin-top:3px; }
+
+  /* TO / GREETING */
+  .to-line   { font-size:13pt; font-weight:bold; margin-bottom:14px; }
+  .greeting  { font-size:13pt; margin-bottom:12px; }
+  .body-text { font-size:12.5pt; line-height:1.9; margin-bottom:20px; }
+
+  /* TABLE */
+  table { width:100%; border-collapse:collapse; margin-bottom:22px; font-size:11.5pt; table-layout:fixed; }
+  thead th {
+    border:2px solid #000; padding:9px 8px; text-align:center;
+    font-weight:bold; background:#e8e8e8; white-space:nowrap;
+    font-size:11pt;
+  }
+  tbody td {
+    border:1.5px solid #000; padding:8px 6px; text-align:center;
+    font-size:11pt; word-wrap:break-word;
+  }
+  /* column widths */
+  col.c-seq   { width:28px; }
+  col.c-id    { width:90px; }
+  col.c-name  { width:auto; }
+  col.c-dept  { width:auto; }
+  col.c-from  { width:90px; }
+  col.c-to    { width:90px; }
+  col.c-days  { width:110px; }
+
+  .closing    { font-size:13pt; font-weight:bold; text-align:center; margin-bottom:24px; }
+  .date-line  { font-size:12pt; text-align:left; margin-bottom:26px; }
+
+  /* SIGNATURES — عميد on left, شئون on right */
+  .sig-section { display:flex; justify-content:space-between; align-items:flex-start; margin-top:20px; }
+  .sig-box { text-align:center; min-width:170px; }
+  .sig-title { font-size:13pt; font-weight:bold; margin-bottom:8px; }
+  .sig-sub   { font-size:11pt; color:#333; }
+  .sig-line  { border-top:1.5px solid #000; padding-top:5px; margin-top:0; min-width:170px; display:inline-block; font-size:10pt; color:#666; }
+
+  .footer { margin-top:28px; border-top:1px solid #888; padding-top:7px; font-size:9pt; color:#666; text-align:center; }
+
+  /* Print actions */
+  .no-print { text-align:center; padding:14px; background:#f0f4f8; border-bottom:2px solid #ddd; }
+  .btn-print { padding:9px 26px; background:#1B3A6B; color:#fff; border:none; border-radius:7px; font-size:14px; cursor:pointer; margin:0 5px; font-family:inherit; }
+  .btn-back  { padding:9px 26px; background:#666; color:#fff; border:none; border-radius:7px; font-size:14px; cursor:pointer; margin:0 5px; font-family:inherit; }
+  @media print { .no-print { display:none !important; } }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button class="btn-back" onclick="history.back()">← رجوع</button>
+  <button class="btn-print" onclick="window.print()">🖨️ طباعة</button>
+</div>
+
+<div style="padding:0;">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="hdr-ar">
+      <div class="name">المعهد التكنولوجي العالي</div>
+      <div class="sub">بالسادس من أكتوبر</div>
+      <div class="sub2">تحت إشراف وزارة التعليم العالي</div>
+    </div>
+    <div class="hdr-logo"><img src="/static/logo.png" style="width:70px;height:70px;object-fit:contain;"></div>
+    <div class="hdr-en">
+      <div class="name">Higher Technological Institute</div>
+      <div class="sub">6<sup>th</sup> of October</div>
+      <div class="sub">Supervised by Ministry of Higher Education</div>
+    </div>
+  </div>
+
+  <!-- TO -->
+  <div class="to-line">السادة/ رؤساء الأقسام العلمية</div>
+  <div class="greeting">تحية طيبة وبعد،،،</div>
+  <div class="body-text">
+    يرجى التكرم بالعلم بأنه ورد إلينا تقرير طبيب المعهد بحالة الطلاب الآتي أسماؤهم<br>
+    ممن يوصى بإجازة مرضية كما هو موضح: .
+  </div>
+
+  <!-- TABLE -->
+  <table>
+    <colgroup>
+      <col style="width:24px;">
+      <col style="width:80px;">
+      <col style="width:170px;">
+      <col style="width:auto;">
+      <col style="width:82px;">
+      <col style="width:82px;">
+      <col style="width:100px;">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>م</th>
+        <th>رقم الطالب</th>
+        <th>إسم الطالب</th>
+        <th>القسم العلمى</th>
+        <th>بداية الأجازة</th>
+        <th>نهاية الأجازة</th>
+        <th>عدد الأيام</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in visits %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ v.person_id }}</td>
+        <td style="text-align:right;padding-right:8px;word-break:break-word;min-width:160px;">{{ v.person_name }}</td>
+        <td style="font-size:9.5pt;word-break:break-word;">{{ v.department or '—' }}</td>
+        <td>{{ v.leave_from or '—' }}</td>
+        <td>{{ v.leave_to or '—' }}</td>
+        <td>{{ v.leave_days }} أيام فقط لاغير</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="closing">وتفضلوا بقبول وافر الاحترام والتقدير،،،</div>
+
+  <div class="date-line">
+    تحريراً في {{ report.created_at[:10] if report.created_at else '' }}
+  </div>
+
+  <!-- SIGNATURES -->
+  <div class="sig-section">
+    <!-- شئون الطلاب — RIGHT — ختم + توقيع -->
+    <div class="sig-box">
+      <div class="sig-title">شئون الطلاب</div>
+      <img src="/static/affairs_combined.png"
+           style="width:150px;height:auto;object-fit:contain;margin:4px auto 6px;display:block;">
+      <div class="sig-line">&nbsp;</div>
+    </div>
+
+    <!-- عميد المعهد — LEFT — ختم العميد مع التوقيع -->
+    <div class="sig-box" style="text-align:center;">
+      <div class="sig-title">يعتمد<br>عميد المعهد</div>
+      <img src="/static/dean_stamp.png"
+           style="width:150px;height:150px;object-fit:contain;margin:2px auto 4px;display:block;">
+      <div class="sig-line">&nbsp;</div>
+    </div>
+  </div>
+
+  <div class="footer">الثلث المجاورة السابعة - ص.ب (٤) مدينة السادس من أكتوبر</div>
+</div>
+</body>
+</html>

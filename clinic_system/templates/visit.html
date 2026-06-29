@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>تسجيل زيارة — نظام العيادة</title>
+<link rel="stylesheet" href="/static/theme.css">
+<style>
+body{display:flex;min-height:100vh;}
+.content{flex:1;padding:24px 30px;display:grid;grid-template-columns:1fr 300px;gap:20px;overflow-y:auto;}
+.form-section{display:flex;flex-direction:column;gap:16px;}
+.form-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow-sm);}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.ig{display:flex;flex-direction:column;gap:6px;}
+.ig.full{grid-column:1/-1;}
+textarea.field{resize:vertical;min-height:72px;}
+
+/* treat toggle */
+.treat-toggle{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.treat-btn{padding:14px;border-radius:10px;border:2px solid var(--border);background:var(--bg-input);cursor:pointer;text-align:center;transition:all .18s;}
+.treat-btn:hover{border-color:var(--teal);}
+.treat-btn.active{border-color:var(--teal);background:var(--teal-light);}
+.ti{font-size:24px;margin-bottom:6px;}
+.tl{font-size:14px;font-weight:700;color:var(--text-secondary);}
+.treat-btn.active .tl{color:var(--teal-dark);}
+.ts{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+/* medicine grid */
+.cat-header{font-size:12px;font-weight:800;color:var(--text-secondary);letter-spacing:.6px;padding:10px 0 7px;display:flex;align-items:center;gap:7px;border-top:1.5px solid var(--border);margin-top:6px;}
+.cat-header:first-child{border-top:none;margin-top:0;}
+.cat-count{background:var(--bg-input);color:var(--text-muted);font-size:10px;padding:2px 7px;border-radius:10px;}
+.cat-group{margin-bottom:4px;}
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.med-item{background:var(--bg-input);border:2px solid var(--border);border-radius:10px;padding:11px;cursor:pointer;transition:all .18s;text-align:center;}
+.med-item:hover{border-color:var(--teal);background:var(--teal-light);}
+.med-item.sel{border-color:var(--teal);background:var(--teal-light);}
+.med-item.sel .mn{color:var(--teal-dark);}
+.mi{font-size:18px;margin-bottom:4px;}
+.mn{font-size:13px;font-weight:800;color:var(--text-primary);line-height:1.3;}
+
+/* leave box */
+.leave-box{background:var(--amber-light);border:2px solid #FDE68A;border-radius:10px;padding:16px;margin-top:14px;}
+.leave-head{font-size:13px;font-weight:700;color:var(--amber);margin-bottom:11px;}
+
+/* upload */
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:18px;text-align:center;cursor:pointer;margin-top:12px;transition:all .15s;}
+.upload-zone:hover,.upload-zone.has-file{border-color:var(--teal);background:var(--teal-light);}
+
+/* right panel */
+.side-panel{display:flex;flex-direction:column;gap:14px;}
+.mini-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);}
+.mini-av{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--blue),#2D5EA8);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;margin-bottom:10px;}
+.mini-name{font-size:15px;font-weight:800;color:var(--text-primary);}
+.mini-id{font-size:16px;color:var(--teal-dark);font-weight:800;margin-top:3px;}
+.mini-dept{font-size:12px;color:var(--text-muted);margin-top:2px;}
+.mini-div{height:1.5px;background:var(--border);margin:11px 0;}
+.mk{font-size:12px;color:var(--text-muted);}
+.mv{font-size:13px;color:var(--text-primary);font-weight:700;}
+.mini-row{display:flex;justify-content:space-between;padding:4px 0;}
+.chronic-box{background:var(--red-light);border:1.5px solid #FECACA;border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:6px;margin-top:9px;}
+.cb-t{font-size:12px;color:var(--red);font-weight:700;}
+
+.sum-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);}
+.sum-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1.5px solid var(--border);}
+.sum-row:last-child{border-bottom:none;}
+.sk{font-size:12px;color:var(--text-muted);}
+.sv{font-size:13px;color:var(--text-primary);font-weight:700;}
+.sel-meds{background:var(--teal-light);border:1.5px solid #A7F3D0;border-radius:8px;padding:9px;margin-top:8px;}
+.sm-item{display:flex;align-items:center;gap:6px;padding:3px 0;}
+.sm-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);flex-shrink:0;}
+.sm-n{font-size:12px;color:var(--text-secondary);}
+
+.submit-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);}
+.sl{font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:10px;}
+.sbtn{width:100%;padding:13px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;border:none;}
+.sbtn-submit{background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:#fff;box-shadow:0 3px 12px rgba(15,158,136,.3);}
+.sbtn-save{background:var(--bg-input);border:1.5px solid var(--border)!important;color:var(--text-secondary);}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--teal);color:#fff;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;display:none;z-index:999;box-shadow:var(--shadow-md);}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">🏥</div>
+    <div class="brand-name">نظام العيادة</div>
+    <div class="brand-sub">المعهد التكنولوجي العالي</div>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="/doctor" class="nav-item"><span class="nav-icon">🔍</span> البحث عن مريض</a>
+    <a href="/doctor/visit" class="nav-item active"><span class="nav-icon">➕</span> زيارة جديدة</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-av">د</div>
+      <div><div class="user-name">{{ doctor_name }}</div><div class="user-role">HTI — أكتوبر</div></div>
+    </div>
+    <a href="/logout" class="logout-btn">🚪 تسجيل خروج</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">تسجيل زيارة جديدة</div>
+      <div class="topbar-sub" id="bc-name">البحث › —</div>
+    </div>
+    <a href="/doctor" class="btn-outline">← رجوع</a>
+  </div>
+
+  <div class="content">
+    <div class="form-section">
+      <!-- Visit details -->
+      <div class="form-card">
+        <div class="section-title">بيانات الزيارة</div>
+        <div class="row-2">
+          <div class="ig"><label class="lbl">التاريخ</label><input class="field" id="visit-date" type="date"></div>
+          <div class="ig"><label class="lbl">سبب التقرير</label>
+            <select class="field" id="report-reason" onchange="toggleCustomReason(this.value)">
+              <option value="">— اختر —</option>
+              <option>امتحان نصف الفصل</option>
+              <option>امتحان أعمال السنة</option>
+              <option>امتحان آخر الفصل</option>
+              <option>غياب</option>
+              <option value="other">أخرى — اكتب السبب</option>
+            </select>
+          </div>
+          <div class="ig full" id="custom-reason-wrap" style="display:none;">
+            <label class="lbl">اكتب السبب</label>
+            <input class="field" id="custom-reason" placeholder="اكتب سبب التقرير...">
+          </div>
+          <div class="ig full"><label class="lbl">التشخيص — Diagnosis *</label><input class="field" id="diagnosis" placeholder="مثال: التهاب حلق، صداع، كسر..." style="font-size:15px;"></div>
+          <div class="ig full"><label class="lbl">ملاحظات</label><textarea class="field" id="notes" placeholder="أي ملاحظات إضافية..."></textarea></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;background:var(--red-light);border:1.5px solid #FECACA;border-radius:9px;padding:11px 14px;">
+          <input type="checkbox" id="is-chronic" style="width:17px;height:17px;accent-color:var(--red);cursor:pointer;">
+          <label for="is-chronic" style="font-size:13px;color:var(--red);font-weight:700;cursor:pointer;">🔴 مرض مزمن — تأكيد أن الزيارة مرتبطة بالحالة المزمنة</label>
+        </div>
+      </div>
+
+      <!-- Treatment -->
+      <div class="form-card">
+        <div class="section-title">نوع العلاج</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:18px;">
+          <div class="treat-btn active" id="treat-clinic" onclick="setTreat('clinic')">
+            <div class="ti">🏥</div><div class="tl">من العياده</div><div class="ts">Clinic</div>
+          </div>
+          <div class="treat-btn" id="treat-meds" onclick="setTreat('meds')">
+            <div class="ti">💊</div><div class="tl">علاج</div><div class="ts">Prescription</div>
+          </div>
+          <div class="treat-btn" id="treat-labs" onclick="setTreat('labs')">
+            <div class="ti">🧪</div><div class="tl">تحاليل</div><div class="ts">Lab Tests</div>
+          </div>
+          <div class="treat-btn" id="treat-xray" onclick="setTreat('xray')">
+            <div class="ti">🩻</div><div class="tl">أشعة</div><div class="ts">Radiology</div>
+          </div>
+          <div class="treat-btn" id="treat-consult" onclick="setTreat('consult')">
+            <div class="ti">👨‍⚕️</div><div class="tl">استشارة</div><div class="ts">Consultation</div>
+          </div>
+        </div>
+        <div id="clinic-section">
+          <div class="section-title">اختر المستلزمات والأدوية المتاحة</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+            <input class="field" id="med-search" placeholder="🔍 ابحث عن صنف..." style="flex:1;padding:9px 12px;font-size:13px;" oninput="filterMeds(this.value)">
+            <div id="cat-filters" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+          </div>
+          <div id="med-grid" style="margin-bottom:14px;"><div style="color:var(--text-muted);font-size:13px;padding:10px;">جاري تحميل الأدوية...</div></div>
+          <div id="selected-count" style="font-size:12px;color:var(--teal-dark);font-weight:700;margin-top:8px;display:none;"></div>
+        </div>
+        <div id="presc-meds-section" style="display:none;">
+          <div class="section-title">💊 اكتب الروشتة — العلاج</div>
+          <textarea class="field" id="prescription-meds" placeholder="اكتب الأدوية والجرعات...&#10;مثال: أموكسيسيلين 500mg — مرتين يومياً — 7 أيام" style="min-height:90px;"></textarea>
+          <button type="button" onclick="printPrescription('meds')" style="margin-top:8px;padding:7px 16px;background:var(--blue-light);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;color:var(--blue);cursor:pointer;font-family:inherit;">🖨️ طباعة الروشتة</button>
+        </div>
+        <div id="presc-labs-section" style="display:none;">
+          <div class="section-title">🧪 التحاليل المطلوبة</div>
+          <textarea class="field" id="prescription-labs" placeholder="اكتب التحاليل المطلوبة...&#10;مثال: صورة دم كاملة — وظائف كبد — سكر صائم" style="min-height:90px;"></textarea>
+          <button type="button" onclick="printPrescription('labs')" style="margin-top:8px;padding:7px 16px;background:var(--blue-light);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;color:var(--blue);cursor:pointer;font-family:inherit;">🖨️ طباعة طلب التحاليل</button>
+        </div>
+        <div id="presc-xray-section" style="display:none;">
+          <div class="section-title">🩻 الأشعة المطلوبة</div>
+          <textarea class="field" id="prescription-xray" placeholder="اكتب الأشعة المطلوبة...&#10;مثال: أشعة سينية على الصدر — رنين مغناطيسي على الركبة" style="min-height:90px;"></textarea>
+          <button type="button" onclick="printPrescription('xray')" style="margin-top:8px;padding:7px 16px;background:var(--blue-light);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;color:var(--blue);cursor:pointer;font-family:inherit;">🖨️ طباعة طلب الأشعة</button>
+        </div>
+        <div id="presc-consult-section" style="display:none;">
+          <div class="section-title">👨‍⚕️ الاستشارة الطبية</div>
+          <textarea class="field" id="prescription-consult" placeholder="اكتب تفاصيل الاستشارة المطلوبة...&#10;مثال: استشارة قلب — استشارة عظام" style="min-height:90px;"></textarea>
+          <button type="button" onclick="printPrescription('consult')" style="margin-top:8px;padding:7px 16px;background:var(--teal-light);border:1.5px solid #A7F3D0;border-radius:8px;font-size:13px;font-weight:700;color:var(--teal-dark);cursor:pointer;font-family:inherit;">🖨️ طباعة طلب الاستشارة</button>
+        </div>
+        <!-- Leave -->
+        <div class="leave-box">
+          <div class="leave-head">🗓️ التوصية الطبية — إجازة مرضية</div>
+          <div class="row-3">
+            <div class="ig">
+              <label class="lbl">مدة الإجازة</label>
+              <select class="field" id="leave-days" onchange="updateLeaveTo()">
+                <option value="0">بدون إجازة</option>
+                <option value="1">يوم واحد</option>
+                <option value="2">يومين</option>
+                <option value="3">3 أيام</option>
+                <option value="4">4 أيام</option>
+                <option value="5">5 أيام</option>
+                <option value="6">6 أيام</option>
+                <option value="7">أسبوع (7)</option>
+                <option value="10">10 أيام</option>
+                <option value="14">أسبوعين (14)</option>
+                <option value="21">3 أسابيع (21)</option>
+                <option value="30">شهر (30)</option>
+                <option value="custom">أدخل عدد أيام...</option>
+              </select>
+            </div>
+            <div class="ig" id="custom-days-wrap" style="display:none;">
+              <label class="lbl">عدد الأيام</label>
+              <input class="field" type="number" id="custom-days-input" min="1" max="365" placeholder="مثال: 12" oninput="setCustomDays(this.value)">
+            </div>
+            <div class="ig"><label class="lbl">من تاريخ</label><input class="field" id="leave-from" type="date" oninput="updateLeaveTo()"></div>
+            <div class="ig"><label class="lbl">إلى تاريخ</label><input class="field" id="leave-to" type="date" readonly style="opacity:.7;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Certificate — students only -->
+      <div class="form-card" id="cert-card">
+        <div class="section-title">رفع شهادة مرضية (اختياري)</div>
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('cert-input').click()">
+          <div style="font-size:26px;margin-bottom:6px;">📎</div>
+          <div style="font-size:14px;color:var(--text-muted);" id="upload-text">اسحب أو اضغط لرفع الشهادة</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">PDF, JPG, PNG</div>
+        </div>
+        <input type="file" id="cert-input" accept=".pdf,.jpg,.png" style="display:none" onchange="setCert(this)">
+      </div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="side-panel">
+      <div class="mini-card" id="mini-card">
+        <div class="mini-av" id="mini-av">—</div>
+        <div class="mini-name" id="mini-name">لم يتم الاختيار</div>
+        <div class="mini-id" id="mini-id">—</div>
+        <div class="mini-dept" id="mini-dept">—</div>
+        <div id="mini-chronic" class="chronic-box" style="display:none;"><span>🔴</span><span class="cb-t">مرض مزمن — Chronic</span></div>
+        <div class="mini-div"></div>
+        <div class="mini-row"><span class="mk">آخر زيارة</span><span class="mv" id="mini-last">—</span></div>
+        <div class="mini-row"><span class="mk">إجمالي الزيارات</span><span class="mv" id="mini-count">—</span></div>
+      </div>
+      <div class="sum-card">
+        <div class="section-title">ملخص الزيارة</div>
+        <div class="sum-row"><span class="sk">التشخيص</span><span class="sv" id="sum-diag">—</span></div>
+        <div class="sum-row"><span class="sk">الإجازة</span><span class="sv" id="sum-leave" style="color:var(--amber);">بدون</span></div>
+        <div class="sum-row"><span class="sk">نوع العلاج</span><span class="sv" id="sum-treat">من العياده</span></div>
+        <div id="sum-meds-wrap">
+          <div class="mk" style="padding:8px 0 5px;">الأدوية المختارة:</div>
+          <div class="sel-meds" id="sum-meds"><div style="color:var(--text-muted);font-size:12px;">لم تُختر أدوية</div></div>
+        </div>
+      </div>
+      <div class="submit-card">
+        <div class="sl">هل تريد إرسال تقرير لشئون الطلاب؟</div>
+        <button class="sbtn sbtn-submit" onclick="saveVisit(true)">📤 حفظ وإرسال لشئون الطلاب</button>
+        <button class="sbtn sbtn-save" onclick="saveVisit(false)">💾 حفظ بدون إرسال</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const DOCTOR_NAME='{{ doctor_name }}';
+let treatType='clinic';
+let selectedMeds=[],selectedMedIds=[],certName='';
+let activeCat='all',allMedsData=[];
+
+const person=JSON.parse(sessionStorage.getItem('currentPerson')||'null');
+if(person){
+  document.getElementById('bc-name').textContent='البحث › '+person.name;
+  document.getElementById('mini-av').textContent=person.name.substring(0,2);
+  document.getElementById('mini-name').textContent=person.name;
+  document.getElementById('mini-id').textContent=(person.type==='student'?'🎓 ':'👔 ')+person.id;
+  document.getElementById('mini-dept').textContent=person.department||'—';
+  const hasChronic=(person.visits||[]).some(v=>v.is_chronic);
+  if(hasChronic){document.getElementById('mini-chronic').style.display='flex';document.getElementById('is-chronic').checked=true;}
+  document.getElementById('mini-count').textContent=(person.visits||[]).length+' زيارة';
+  if(person.visits&&person.visits.length>0)document.getElementById('mini-last').textContent=person.visits[0].visit_date;
+  // Certificate upload — students only
+  const certCard=document.getElementById('cert-card');
+  if(certCard) certCard.style.display = (person.type==='student') ? 'block' : 'none';
+}
+const today=new Date().toISOString().split('T')[0];
+document.getElementById('visit-date').value=today;
+document.getElementById('leave-from').value=today;
+
+const catIcons={'أقراص وكبسول':'💊','حقن':'💉','كريمات ومراهم':'🧴','قطرات وسبراى':'💧','محاليل':'💧','مستلزمات الضماد':'🩹','أدوات طبية':'🔬','أجهزة وأدوات':'🔧','لصقات':'🩹'};
+
+fetch('/api/medicines').then(r=>r.json()).then(meds=>{
+  allMedsData=meds;
+  const groups={};
+  meds.forEach(m=>{const cat=m.category||'أخرى';if(!groups[cat])groups[cat]=[];groups[cat].push(m);});
+  const cf=document.getElementById('cat-filters');
+  cf.innerHTML=`<button class="cat-filter-btn" onclick="setCatFilter('all',this)" style="padding:4px 10px;border-radius:14px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal-dark);font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">الكل</button>`;
+  Object.keys(groups).forEach(cat=>{
+    const icon=catIcons[cat]||'🏥';
+    cf.innerHTML+=`<button class="cat-filter-btn" onclick="setCatFilter('${cat}',this)" style="padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--bg-input);color:var(--text-secondary);font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;">${icon} ${cat}</button>`;
+  });
+  let html='';
+  for(const[cat,items]of Object.entries(groups)){
+    const icon=catIcons[cat]||'🏥';
+    html+=`<div class="cat-group" data-cat="${cat}"><div class="cat-header"><span>${icon}</span>${cat}<span class="cat-count">${items.length}</span></div><div class="cat-grid">`;
+    html+=items.map(m=>`<div class="med-item" data-id="${m.id}" data-name="${m.name}" onclick="toggleMed(this)"><div class="mi">${catIcons[m.category]||'🏥'}</div><div class="mn">${m.name}</div></div>`).join('');
+    html+=`</div></div>`;
+  }
+  document.getElementById('med-grid').innerHTML=html;
+});
+
+function filterMeds(q){q=q.trim().toLowerCase();document.querySelectorAll('.cat-group').forEach(g=>{const cat=g.dataset.cat;if(activeCat!=='all'&&cat!==activeCat){g.style.display='none';return;}const items=g.querySelectorAll('.med-item');let any=false;items.forEach(i=>{const show=!q||i.dataset.name.toLowerCase().includes(q);i.style.display=show?'':'none';if(show)any=true;});g.style.display=any?'':'none';});}
+function setCatFilter(cat,btn){activeCat=cat;document.querySelectorAll('.cat-filter-btn').forEach(b=>{b.style.background=b===btn?'var(--teal-light)':'var(--bg-input)';b.style.borderColor=b===btn?'var(--teal)':'var(--border)';b.style.color=b===btn?'var(--teal-dark)':'var(--text-secondary)';});filterMeds(document.getElementById('med-search').value);}
+function setTreat(t){
+  treatType=t;
+  ['treat-clinic','treat-meds','treat-labs','treat-xray','treat-consult'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.classList.remove('active');
+  });
+  const activeEl=document.getElementById({'clinic':'treat-clinic','meds':'treat-meds','labs':'treat-labs','xray':'treat-xray','consult':'treat-consult'}[t]);
+  if(activeEl) activeEl.classList.add('active');
+  document.getElementById('clinic-section').style.display=t==='clinic'?'block':'none';
+  document.getElementById('presc-meds-section').style.display=t==='meds'?'block':'none';
+  document.getElementById('presc-labs-section').style.display=t==='labs'?'block':'none';
+  document.getElementById('presc-xray-section').style.display=t==='xray'?'block':'none';
+  document.getElementById('presc-consult-section').style.display=t==='consult'?'block':'none';
+  const labels={'clinic':'من العياده','meds':'علاج (روشتة)','labs':'تحاليل','xray':'أشعة','consult':'استشارة طبية'};
+  document.getElementById('sum-treat').textContent=labels[t]||t;
+}
+function toggleMed(el){el.classList.toggle('sel');const id=parseInt(el.dataset.id),name=el.dataset.name;if(el.classList.contains('sel')){selectedMeds.push(name);selectedMedIds.push(id);}else{selectedMeds=selectedMeds.filter(n=>n!==name);selectedMedIds=selectedMedIds.filter(i=>i!==id);}updateSummaryMeds();}
+function updateSummaryMeds(){const sm=document.getElementById('sum-meds');sm.innerHTML=selectedMeds.length?selectedMeds.map(n=>`<div class="sm-item"><div class="sm-dot"></div><span class="sm-n">${n}</span></div>`).join(''):'<div style="color:var(--text-muted);font-size:12px;">لم تُختر أدوية</div>';const sc=document.getElementById('selected-count');if(selectedMeds.length>0){sc.textContent=`✅ تم اختيار ${selectedMeds.length} صنف`;sc.style.display='block';}else sc.style.display='none';}
+function updateLeaveTo(){const sel=document.getElementById('leave-days');if(sel.value==='custom'){document.getElementById('custom-days-wrap').style.display='';return;}document.getElementById('custom-days-wrap').style.display='none';const days=parseInt(sel.value)||0;const from=document.getElementById('leave-from').value;if(days>0&&from){const d=new Date(from);d.setDate(d.getDate()+days-1);document.getElementById('leave-to').value=d.toISOString().split('T')[0];}document.getElementById('sum-leave').textContent=days>0?`${days} أيام`:'بدون';}
+function setCustomDays(val){const days=parseInt(val)||0;const from=document.getElementById('leave-from').value;if(days>0&&from){const d=new Date(from);d.setDate(d.getDate()+days-1);document.getElementById('leave-to').value=d.toISOString().split('T')[0];}document.getElementById('sum-leave').textContent=days>0?`${days} أيام`:'بدون';}
+async function setCert(input){
+  if(!input.files.length) return;
+  const file = input.files[0];
+  certName = file.name;
+  document.getElementById('upload-text').textContent = '⏳ جاري الرفع على OneDrive...';
+  document.getElementById('upload-zone').classList.add('has-file');
+
+  if (!person) { showToast('لم يتم اختيار طالب', 'var(--red)'); return; }
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('student_id', person.id);
+  formData.append('student_name', person.name);
+
+  try {
+    const res = await fetch('/api/upload_certificate', {
+      method: 'POST',
+      credentials: 'same-origin',
+      body: formData
+    });
+    const data = await res.json();
+    if (data.success) {
+      certName = data.saved_name;
+      if (data.storage === 'onedrive') {
+        document.getElementById('upload-text').textContent = '✅ تم الرفع على OneDrive — ' + certName;
+        showToast('✅ تم رفع الشهادة على OneDrive بنجاح');
+      } else {
+        document.getElementById('upload-text').textContent = '⚠️ حُفظ محلياً (لم يصل OneDrive) — ' + certName;
+        showToast(data.warning || 'تم الحفظ محلياً فقط', 'var(--amber)');
+      }
+    } else {
+      document.getElementById('upload-text').textContent = '❌ فشل الرفع — ' + (data.error || '');
+      document.getElementById('upload-zone').classList.remove('has-file');
+      showToast(data.error || 'فشل رفع الملف', 'var(--red)');
+    }
+  } catch (err) {
+    document.getElementById('upload-text').textContent = '❌ خطأ في الرفع';
+    document.getElementById('upload-zone').classList.remove('has-file');
+  }
+}
+document.getElementById('diagnosis').addEventListener('input',e=>{document.getElementById('sum-diag').textContent=e.target.value||'—';});
+function printPrescription(type) {
+  if(!person) { alert('لم يتم اختيار مريض'); return; }
+  const typeLabels = {'meds':'روشتة علاج','labs':'طلب تحاليل','xray':'طلب أشعة','consult':'طلب استشارة'};
+  const typeIcons  = {'meds':'💊','labs':'🧪','xray':'🩻','consult':'👨‍⚕️'};
+  const idMap = {'meds':'prescription-meds','labs':'prescription-labs','xray':'prescription-xray','consult':'prescription-consult'};
+  const text = document.getElementById(idMap[type])?.value || '';
+  const diag = document.getElementById('diagnosis').value || '—';
+  const doc  = DOCTOR_NAME;
+  const date = document.getElementById('visit-date').value;
+
+  const win = window.open('','_blank');
+  win.document.write(`
+    <!DOCTYPE html><html dir="rtl" lang="ar">
+    <head><meta charset="UTF-8"><title>${typeLabels[type]}</title>
+    <style>
+      @page{size:A4;margin:20mm 22mm;}
+      *{margin:0;padding:0;box-sizing:border-box;}
+      body{font-family:"Times New Roman","Arial",serif;direction:rtl;color:#000;font-size:13pt;}
+      .header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:18px;}
+      .h-ar .name{font-size:16pt;font-weight:bold;}
+      .h-ar .sub{font-size:11pt;margin-top:3px;}
+      .h-logo img{width:70px;height:70px;object-fit:contain;}
+      .h-en{text-align:left;font-size:10pt;}
+      .title{text-align:center;font-size:18pt;font-weight:bold;text-decoration:underline;margin:12px 0 20px;}
+      .field-row{display:flex;align-items:baseline;margin-bottom:14px;font-size:13pt;}
+      .field-row .lbl{font-weight:bold;min-width:130px;}
+      .field-row .val{flex:1;border-bottom:1px dotted #555;padding-right:8px;min-height:20px;}
+      .content-box{border:1.5px solid #000;border-radius:4px;padding:14px;min-height:100px;margin:16px 0;font-size:13pt;line-height:1.8;white-space:pre-wrap;}
+      .sig-section{display:flex;justify-content:flex-end;margin-top:40px;}
+      .sig-box{text-align:center;min-width:150px;}
+      .sig-title{font-weight:bold;font-size:12pt;margin-bottom:40px;}
+      .sig-line{border-top:1px solid #000;padding-top:5px;}
+      .no-print{text-align:center;padding:12px;background:#f0f4f8;border-bottom:2px solid #ddd;}
+      .btn-p{padding:9px 24px;background:#1B3A6B;color:#fff;border:none;border-radius:7px;font-size:14px;cursor:pointer;margin:0 5px;font-family:inherit;}
+      @media print{.no-print{display:none!important;}}
+    </style></head>
+    <body>
+    <div class="no-print">
+      <button class="btn-p" onclick="window.print()">🖨️ طباعة</button>
+      <button class="btn-p" style="background:#666;" onclick="window.close()">إغلاق</button>
+    </div>
+    <div style="padding:0 5px;">
+      <div class="header">
+        <div class="h-ar"><div class="name">المعهد التكنولوجي العالي</div><div class="sub">بالسادس من أكتوبر</div><div class="sub" style="font-size:10pt;color:#444;">تحت إشراف وزارة التعليم العالي</div></div>
+        <div class="h-logo"><img src="/static/logo.png"></div>
+        <div class="h-en"><div style="font-weight:bold;font-size:12pt;">Higher Technological Institute</div><div>6th of October</div><div>Min. of Higher Education</div></div>
+      </div>
+      <div class="title">${typeIcons[type]} ${typeLabels[type]}</div>
+      <div class="field-row"><span class="lbl">اسم المريض :</span><span class="val">${person.name}</span></div>
+      <div class="field-row"><span class="lbl">${person.type==='student'?'كود الطالب':'رقم الملف'} :</span><span class="val">${person.id}</span></div>
+      <div class="field-row"><span class="lbl">القسم :</span><span class="val">${person.department||'—'}</span></div>
+      <div class="field-row"><span class="lbl">التشخيص :</span><span class="val">${diag}</span></div>
+      <div class="field-row"><span class="lbl">التاريخ :</span><span class="val">${date}</span></div>
+      <div style="font-weight:bold;margin-bottom:8px;font-size:13pt;">${typeLabels[type]} :</div>
+      <div class="content-box">${text}</div>
+      <div class="sig-section">
+        <div class="sig-box">
+          <div class="sig-title">طبيب العيادة</div>
+          <div class="sig-line">${doc}</div>
+        </div>
+      </div>
+    </div>
+    </body></html>
+  `);
+  win.document.close();
+}
+
+function toggleCustomReason(val) {
+  const wrap = document.getElementById('custom-reason-wrap');
+  wrap.style.display = val === 'other' ? '' : 'none';
+}
+
+async function saveVisit(submitToAffairs){
+  if(!person){showToast('لم يتم اختيار مريض!','var(--red)');return;}
+  const diag=document.getElementById('diagnosis').value.trim();
+  if(!diag){showToast('من فضلك أدخل التشخيص','var(--red)');return;}
+  const sel=document.getElementById('leave-days');
+  const leaveDays=sel.value==='custom'?parseInt(document.getElementById('custom-days-input')?.value)||0:parseInt(sel.value)||0;
+  const payload={person_type:person.type,person_id:person.id,person_name:person.name,department:person.department,visit_date:document.getElementById('visit-date').value,diagnosis:diag,treatment_type:treatType,medicines:selectedMeds,medicine_ids:selectedMedIds,prescription:(()=>{
+      if(treatType==='meds')    return document.getElementById('prescription-meds').value;
+      if(treatType==='labs')    return '🧪 تحاليل: '+document.getElementById('prescription-labs').value;
+      if(treatType==='xray')    return '🩻 أشعة: '+document.getElementById('prescription-xray').value;
+      if(treatType==='consult') return '👨‍⚕️ استشارة: '+document.getElementById('prescription-consult').value;
+      return '';
+    })(),leave_days:leaveDays,leave_from:document.getElementById('leave-from').value,leave_to:document.getElementById('leave-to').value,is_chronic:document.getElementById('is-chronic').checked,report_reason:(()=>{
+      const sel = document.getElementById('report-reason');
+      if(sel.value === 'other') return document.getElementById('custom-reason').value.trim();
+      return sel.value;
+    })(),notes:document.getElementById('notes').value,certificate_name:certName,doctor_name:DOCTOR_NAME};
+  const res=await fetch('/api/save_visit',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(payload)});
+  const data=await res.json();
+  if(!data.success){showToast('خطأ: '+data.error,'var(--red)');return;}
+  if(submitToAffairs&&leaveDays>0){await fetch(`/api/submit_to_affairs/${data.visit_id}`,{method:'POST'});showToast('✅ تم الحفظ والإرسال لشئون الطلاب');}
+  else showToast('✅ تم حفظ الزيارة بنجاح');
+  setTimeout(()=>window.location.href='/doctor',1800);
+}
+function showToast(msg,bg='var(--teal)'){const t=document.getElementById('toast');t.textContent=msg;t.style.background=bg;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
+</script>
+</body>
+</html>

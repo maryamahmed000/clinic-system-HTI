@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>تسجيل الدخول — نظام العيادة</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:"Tajawal","Segoe UI",Arial,sans-serif;background:linear-gradient(135deg,#EBF1FA 0%,#F0F4F8 50%,#E6F7F5 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;direction:rtl;}
+.page-wrap{width:100%;max-width:480px;padding:24px;}
+.logo-section{text-align:center;margin-bottom:32px;}
+.logo-circle{width:80px;height:80px;background:linear-gradient(135deg,#0F9E88,#0A7A6A);border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:38px;margin:0 auto 16px;box-shadow:0 8px 28px rgba(15,158,136,.3);}
+.inst-name{font-size:22px;font-weight:900;color:#1A2744;margin-bottom:4px;}
+.inst-sub{font-size:14px;color:#4A5878;margin-bottom:3px;}
+.inst-en{font-size:12px;color:#8A95B0;}
+.system-badge{display:inline-block;background:#E6F7F5;border:1.5px solid #A7F3D0;color:#0A7A6A;padding:5px 18px;border-radius:20px;font-size:13px;font-weight:700;margin-top:12px;}
+.card{background:#fff;border:1.5px solid #D8E2EF;border-radius:18px;padding:32px 36px;box-shadow:0 8px 32px rgba(26,39,68,.1);}
+.card-title{font-size:22px;font-weight:900;color:#1A2744;margin-bottom:4px;}
+.card-sub{font-size:13px;color:#8A95B0;margin-bottom:26px;}
+.role-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px;}
+.role-tab{padding:14px;border-radius:11px;border:2px solid #D8E2EF;background:#F7F9FC;cursor:pointer;text-align:center;transition:all .2s;}
+.role-tab:hover{border-color:#0F9E88;background:#E6F7F5;}
+.role-tab.active.doctor{border-color:#0F9E88;background:#E6F7F5;}
+.role-tab.active.affairs{border-color:#6D28D9;background:#EDE9FE;}
+.role-tab.admin-tab.active{border-color:#374151;background:#F1F5F9;}
+.rt-icon{font-size:26px;margin-bottom:7px;}
+.rt-label{font-size:14px;font-weight:700;color:#4A5878;}
+.role-tab.active.doctor .rt-label{color:#0A7A6A;}
+.role-tab.active.affairs .rt-label{color:#6D28D9;}
+.rt-sub{font-size:11px;color:#8A95B0;margin-top:3px;}
+.error-msg{background:#FEE2E2;border:1.5px solid #FECACA;color:#DC2626;padding:11px 16px;border-radius:9px;font-size:13px;margin-bottom:18px;display:none;align-items:center;gap:8px;}
+.error-msg.show{display:flex;}
+.form-group{margin-bottom:18px;}
+.form-label{font-size:13px;color:#4A5878;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.form-input{width:100%;background:#F7F9FC;border:1.5px solid #D8E2EF;border-radius:10px;padding:13px 16px;font-size:15px;color:#1A2744;outline:none;direction:rtl;font-family:inherit;transition:all .2s;}
+.form-input:focus{border-color:#0F9E88;box-shadow:0 0 0 3px rgba(15,158,136,.12);background:#fff;}
+.form-input.affairs:focus{border-color:#6D28D9;box-shadow:0 0 0 3px rgba(109,40,217,.1);}
+.login-btn{width:100%;padding:14px;border-radius:10px;border:none;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s;}
+.btn-doctor{background:linear-gradient(135deg,#0F9E88,#0A7A6A);color:#fff;box-shadow:0 4px 16px rgba(15,158,136,.35);}
+.btn-doctor:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(15,158,136,.45);}
+.btn-affairs{background:linear-gradient(135deg,#6D28D9,#5B21B6);color:#fff;box-shadow:0 4px 16px rgba(109,40,217,.3);}
+.btn-affairs:hover{transform:translateY(-1px);}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Logo -->
+  <div class="logo-section">
+    <div class="logo-circle">🏥</div>
+    <div class="inst-name">المعهد التكنولوجي العالي</div>
+    <div class="inst-sub">بالسادس من أكتوبر</div>
+    <div class="inst-en">Higher Technological Institute — 6th of October</div>
+    <div class="system-badge">نظام العيادة الطبية الإلكتروني</div>
+  </div>
+
+  <!-- Card -->
+  <div class="card">
+    <div class="card-title">تسجيل الدخول</div>
+    <div class="card-sub">Clinic System — نظام العيادة الطبية</div>
+
+    <!-- Role tabs -->
+    <div class="role-tabs" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="role-tab active doctor" id="tab-doctor" onclick="setRole('doctor')">
+        <div class="rt-icon">🩺</div>
+        <div class="rt-label">طبيب العيادة</div>
+        <div class="rt-sub">Doctor Login</div>
+      </div>
+      <div class="role-tab affairs" id="tab-affairs" onclick="setRole('affairs')">
+        <div class="rt-icon">🏛️</div>
+        <div class="rt-label">شئون الطلاب</div>
+        <div class="rt-sub">Student Affairs</div>
+      </div>
+      <div class="role-tab" id="tab-admin" onclick="setRole('admin')" style="border-color:#D8E2EF;">
+        <div class="rt-icon">⚙️</div>
+        <div class="rt-label" style="color:#4A5878;">الإدارة</div>
+        <div class="rt-sub">Admin</div>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-msg" id="error-msg" style="display:none;">
+      <span>❌</span>
+      <span>اسم المستخدم أو كلمة المرور غير صحيحة</span>
+    </div>
+
+    <!-- Form -->
+    <form onsubmit="doLogin(event)">
+      <div class="form-group">
+        <label class="form-label">
+          <span class="lbl-icon">👤</span> اسم المستخدم
+        </label>
+        <input class="form-input" id="username" 
+               placeholder="اكتب اسم المستخدم..." 
+               autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label class="form-label">
+          <span class="lbl-icon">🔒</span> كلمة المرور
+        </label>
+        <input class="form-input" id="password" 
+               type="password" 
+               placeholder="••••••••••" 
+               autocomplete="current-password">
+      </div>
+      <button type="submit" class="login-btn btn-doctor" id="login-btn">
+        <span id="btn-icon">🏥</span>
+        <span id="btn-text">دخول — العياده</span>
+      </button>
+    </form>
+
+
+  </div>
+</div>
+
+<script>
+let role = 'doctor';
+
+function setRole(r) {
+  role = r;
+
+  // Reset all tabs
+  document.getElementById('tab-doctor').className = 'role-tab doctor';
+  document.getElementById('tab-affairs').className = 'role-tab affairs';
+  document.getElementById('tab-admin').className   = 'role-tab admin-tab';
+
+  // Activate selected tab
+  if (r === 'doctor')  document.getElementById('tab-doctor').className  += ' active';
+  if (r === 'affairs') document.getElementById('tab-affairs').className += ' active';
+  if (r === 'admin')   document.getElementById('tab-admin').className   += ' active';
+
+  const uInput = document.getElementById('username');
+  const pInput = document.getElementById('password');
+  const btn    = document.getElementById('login-btn');
+
+  // Reset button style
+  btn.style.background = '';
+
+  if (r === 'doctor') {
+    uInput.className = 'form-input';
+    pInput.className = 'form-input';
+    btn.className = 'login-btn btn-doctor';
+    document.getElementById('btn-icon').textContent = '🏥';
+    document.getElementById('btn-text').textContent = 'دخول — العياده';
+    uInput.placeholder = 'nashat أو mohamed';
+  } else if (r === 'affairs') {
+    uInput.className = 'form-input affairs';
+    pInput.className = 'form-input affairs';
+    btn.className = 'login-btn btn-affairs';
+    document.getElementById('btn-icon').textContent = '🏛️';
+    document.getElementById('btn-text').textContent = 'دخول — شئون الطلاب';
+    uInput.placeholder = 'affairs';
+  } else if (r === 'admin') {
+    uInput.className = 'form-input';
+    pInput.className = 'form-input';
+    btn.className = 'login-btn btn-doctor';
+    btn.style.background = 'linear-gradient(135deg,#374151,#1F2937)';
+    document.getElementById('btn-icon').textContent = '⚙️';
+    document.getElementById('btn-text').textContent = 'دخول — الإدارة';
+    uInput.placeholder = 'admin';
+  }
+
+  document.getElementById('error-msg').classList.remove('show');
+  uInput.value = '';
+  pInput.value = '';
+  uInput.focus();
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  
+  if (!username || !password) {
+    document.getElementById('error-msg').classList.add('show');
+    return;
+  }
+  
+  const btn = document.getElementById('login-btn');
+  btn.style.opacity = '.7';
+  btn.style.cursor = 'wait';
+  
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username, password, role})
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      btn.style.opacity = '1';
+      window.location.href = data.redirect;
+    } else {
+      document.getElementById('error-msg').classList.add('show');
+      document.getElementById('password').value = '';
+      document.getElementById('password').focus();
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+    }
+  } catch(err) {
+    document.getElementById('error-msg').classList.add('show');
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+  }
+}
+
+// Auto-focus
+setRole('doctor');
+</script>
+</body>
+</html>

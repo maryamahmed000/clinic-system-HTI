@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>البحث عن مريض — نظام العيادة</title>
+<link rel="stylesheet" href="/static/theme.css">
+<style>
+body{display:flex;min-height:100vh;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.search-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:22px;box-shadow:var(--shadow-sm);}
+.type-toggle{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.type-btn{padding:16px;border-radius:10px;border:2px solid var(--border);background:var(--bg-input);cursor:pointer;text-align:center;transition:all .2s;}
+.type-btn:hover{border-color:var(--teal);background:var(--teal-light);}
+.type-btn.active{border-color:var(--teal);background:var(--teal-light);}
+.tb-icon{font-size:26px;margin-bottom:7px;}
+.tb-label{font-size:15px;font-weight:700;color:var(--text-secondary);}
+.type-btn.active .tb-label{color:var(--teal-dark);}
+.tb-sub{font-size:12px;color:var(--text-muted);margin-top:3px;}
+.search-row{display:flex;gap:12px;align-items:flex-end;}
+.search-row .input-group{flex:1;}
+.search-btn{background:linear-gradient(135deg,var(--teal),var(--teal-dark));border:none;color:#fff;padding:12px 28px;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;box-shadow:0 3px 12px rgba(15,158,136,.3);}
+.search-btn:hover{transform:translateY(-1px);}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+
+/* Result */
+.result-area{display:none;margin-top:20px;border-top:2px solid var(--border);padding-top:20px;}
+.profile-row{display:flex;gap:16px;align-items:flex-start;}
+.profile-avatar{width:58px;height:58px;border-radius:14px;background:linear-gradient(135deg,var(--blue),#2D5EA8);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;flex-shrink:0;}
+.profile-name{font-size:19px;font-weight:800;color:var(--text-primary);}
+.profile-id{font-size:17px;color:var(--teal-dark);font-weight:800;margin-top:3px;}
+.profile-dept{font-size:13px;color:var(--text-muted);margin-top:2px;}
+.chronic-flag{background:var(--red-light);border:1.5px solid #FECACA;color:var(--red);padding:5px 12px;border-radius:8px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:5px;margin-top:8px;}
+.profile-actions{display:flex;gap:10px;margin-top:14px;}
+
+/* Visits */
+.visits-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);}
+.visit-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1.5px solid var(--border);}
+.visit-item:last-child{border-bottom:none;}
+.vi-av{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
+.vi-t{background:linear-gradient(135deg,var(--teal),var(--teal-dark));}
+.vi-b{background:linear-gradient(135deg,var(--blue),#2D5EA8);}
+.vi-a{background:linear-gradient(135deg,var(--amber),#B45309);}
+.vi-r{background:linear-gradient(135deg,var(--red),#B91C1C);}
+.vi-name{font-size:13px;font-weight:700;color:var(--text-primary);}
+.vi-diag{font-size:12px;color:var(--text-muted);margin-top:2px;}
+.vi-time{font-size:11px;color:var(--text-muted);flex-shrink:0;}
+.alert-item{background:var(--bg-input);border:1.5px solid var(--border);border-radius:9px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+.al-text{font-size:13px;color:var(--text-secondary);flex:1;}
+.al-badge{font-size:11px;padding:3px 9px;border-radius:7px;font-weight:700;}
+.ab-warn{background:var(--amber-light);color:var(--amber);}
+.ab-ok{background:var(--green-light);color:var(--green);}
+.history-list{margin-top:16px;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--teal);color:#fff;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;display:none;z-index:999;box-shadow:var(--shadow-md);}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">🏥</div>
+    <div class="brand-name">نظام العيادة</div>
+    <div class="brand-sub">المعهد التكنولوجي العالي — أكتوبر</div>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="/doctor" class="nav-item active"><span class="nav-icon">🔍</span> البحث عن مريض</a>
+    <a href="/doctor/visit" class="nav-item" id="nav-visit" style="display:none;"><span class="nav-icon">➕</span> زيارة جديدة</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-av">{{ doctor_name[2] if doctor_name|length > 2 else 'د' }}</div>
+      <div>
+        <div class="user-name">{{ doctor_name }}</div>
+        <div class="user-role">HTI — السادس من أكتوبر</div>
+      </div>
+    </div>
+    <a href="/logout" class="logout-btn">🚪 تسجيل خروج</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">البحث عن مريض</div>
+      <div class="topbar-sub">المعهد التكنولوجي العالي — السادس من أكتوبر</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="background:var(--bg-input);border:1.5px solid var(--border);padding:7px 16px;border-radius:20px;font-size:13px;color:var(--text-muted);" id="today-date">📅 ...</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-num">{{ stats.today }}</div>
+        <div class="stat-label">زيارات اليوم</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🎓</div>
+        <div class="stat-num">918</div>
+        <div class="stat-label">إجمالي الطلاب</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👔</div>
+        <div class="stat-num">{{ stats.employees_count }}</div>
+        <div class="stat-label">إجمالي الموظفين</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">💊</div>
+        <div class="stat-num">{{ stats.medicines_count }}</div>
+        <div class="stat-label">أصناف الأدوية</div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-card">
+      <div class="section-title">بحث عن مريض — Patient Search</div>
+      <div class="type-toggle">
+        <div class="type-btn active" onclick="setType('student',this)">
+          <div class="tb-icon">🎓</div>
+          <div class="tb-label">طالب — Student</div>
+          <div class="tb-sub">ابحث بكود الطالب أو الاسم</div>
+        </div>
+        <div class="type-btn" onclick="setType('employee',this)">
+          <div class="tb-icon">👔</div>
+          <div class="tb-label">موظف — Employee</div>
+          <div class="tb-sub">ابحث برقم الملف أو الاسم</div>
+        </div>
+      </div>
+      <div class="search-row">
+        <div class="input-group">
+          <label class="lbl" id="search-label">كود الطالب أو الاسم</label>
+          <input class="field" id="search-input" style="font-size:15px;" placeholder="مثال: 32025001 أو محمد أحمد" onkeydown="if(event.key==='Enter')doSearch()">
+        </div>
+        <button class="search-btn" onclick="doSearch()">🔍 بحث</button>
+      </div>
+      <div id="search-error" style="color:var(--red);font-size:13px;margin-top:10px;display:none;"></div>
+
+      <!-- Result -->
+      <div class="result-area" id="result-area">
+        <div class="profile-row">
+          <div class="profile-avatar" id="res-avatar">ا</div>
+          <div>
+            <div class="profile-name" id="res-name">—</div>
+            <div class="profile-id" id="res-id">—</div>
+            <div class="profile-dept" id="res-dept">—</div>
+            <div id="res-chronic" class="chronic-flag" style="display:none;">🔴 مرض مزمن — Chronic Illness</div>
+          </div>
+        </div>
+        <div class="profile-actions">
+          <button class="btn-primary" onclick="goNewVisit()">➕ تسجيل زيارة جديدة</button>
+          <button class="btn-outline" onclick="toggleHistory()">📋 التاريخ الطبي</button>
+        </div>
+        <div class="history-list" id="history-list" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Bottom grid -->
+    <div class="grid-2">
+      <div class="visits-card">
+        <div class="section-title">زيارات اليوم</div>
+        {% if today_visits %}
+          {% set avs = ['vi-t','vi-b','vi-a','vi-r'] %}
+          {% for v in today_visits[:6] %}
+          <div class="visit-item">
+            <div class="vi-av {{ avs[loop.index0 % 4] }}">{{ v.person_name[:2] }}</div>
+            <div style="flex:1;min-width:0;">
+              <div class="vi-name">{{ v.person_name }}</div>
+              <div class="vi-diag">{{ v.diagnosis or '—' }}</div>
+            </div>
+            <div class="vi-time">{{ v.created_at[11:16] if v.created_at else '' }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="text-align:center;padding:30px;color:var(--text-muted);font-size:14px;">لا توجد زيارات اليوم</div>
+        {% endif %}
+      </div>
+      <div class="visits-card">
+        <div class="section-title">تنبيهات — Alerts</div>
+        {% if stats.pending > 0 %}
+        <div class="alert-item">
+          <span>📤</span>
+          <span class="al-text">{{ stats.pending }} تقارير بانتظار الإرسال لشئون الطلاب</span>
+          <span class="al-badge ab-warn">معلق</span>
+        </div>
+        {% endif %}
+        <div class="alert-item">
+          <span>✅</span>
+          <span class="al-text">السيستم يعمل بشكل طبيعي</span>
+          <span class="al-badge ab-ok">OK</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+sessionStorage.setItem('doctorName','{{ doctor_name }}');
+let personType='student';
+const now=new Date();
+document.getElementById('today-date').textContent='📅 '+now.toLocaleDateString('ar-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+function setType(t,el){
+  personType=t;
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('search-label').textContent=t==='student'?'كود الطالب أو الاسم':'رقم الملف أو الاسم';
+  document.getElementById('search-input').placeholder=t==='student'?'مثال: 32025001 أو محمد أحمد':'مثال: 48 أو طارق محمد';
+  document.getElementById('result-area').style.display='none';
+  document.getElementById('search-error').style.display='none';
+}
+
+async function doSearch(){
+  const q=document.getElementById('search-input').value.trim();
+  if(!q){showError('من فضلك أدخل رقم أو اسم للبحث');return;}
+  document.getElementById('search-error').style.display='none';
+  const res=await fetch(`/api/search?q=${encodeURIComponent(q)}&type=${personType}`);
+  const data=await res.json();
+  if(!data.found){showError(data.message||'لم يتم العثور على نتيجة');document.getElementById('result-area').style.display='none';return;}
+  window.currentPerson={...data.person,visits:data.visits};
+  document.getElementById('res-avatar').textContent=data.person.name.substring(0,2);
+  document.getElementById('res-name').textContent=data.person.name;
+  document.getElementById('res-id').textContent=(personType==='student'?'🎓 كود: ':'👔 ملف: ')+data.person.id;
+  document.getElementById('res-dept').textContent='📚 '+(data.person.department||'—');
+  document.getElementById('res-chronic').style.display=data.visits.some(v=>v.is_chronic)?'inline-flex':'none';
+  document.getElementById('result-area').style.display='block';
+  document.getElementById('history-list').style.display='none';
+  document.getElementById('nav-visit').style.display='flex';
+  sessionStorage.setItem('currentPerson',JSON.stringify(window.currentPerson));
+}
+
+function goNewVisit(){if(window.currentPerson){sessionStorage.setItem('currentPerson',JSON.stringify(window.currentPerson));window.location.href='/doctor/visit';}}
+
+function toggleHistory(){
+  const hl=document.getElementById('history-list');
+  if(hl.style.display==='none'){renderHistory();hl.style.display='block';}
+  else hl.style.display='none';
+}
+
+function renderHistory(){
+  const visits=window.currentPerson?.visits||[];
+  const hl=document.getElementById('history-list');
+  if(!visits.length){hl.innerHTML='<div style="color:var(--text-muted);font-size:14px;padding:16px;text-align:center;">لا يوجد تاريخ طبي سابق</div>';return;}
+  const acs=['var(--teal)','var(--blue)','var(--amber)','var(--red)'];
+  hl.innerHTML=visits.map((v,i)=>`
+    <div class="visit-entry" style="--ac:${acs[i%4]}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
+        <span class="ve-date">📅 ${v.visit_date}</span>
+        ${v.doctor_name?`<span style="background:var(--purple-light);border:1.5px solid #DDD6FE;color:var(--purple);font-size:12px;font-weight:700;padding:3px 11px;border-radius:20px;">🩺 ${v.doctor_name}</span>`:''}
+      </div>
+      <div class="ve-diag">${v.diagnosis||'—'}
+        ${v.is_chronic?'<span class="tag t-red" style="margin-right:5px;">مزمن</span>':''}
+        ${v.submitted_to_affairs?'<span class="tag t-teal" style="margin-right:5px;">أُرسل لشئون ✓</span>':''}
+      </div>
+      ${v.treatment_type==='clinic'&&Array.isArray(v.medicines)&&v.medicines.length?`<div class="ve-treat">💊 ${v.medicines.join(' — ')}</div>`:v.prescription?`<div class="ve-treat">📋 ${v.prescription}</div>`:''}
+      ${v.leave_days>0?`
+        <div style="background:var(--amber-light);border:1.5px solid #FDE68A;border-radius:8px;padding:9px 12px;margin-top:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+          <span style="font-size:13px;font-weight:800;color:var(--amber);">🗓️ إجازة ${v.leave_days} ${v.leave_days==1?'يوم':'أيام'}</span>
+          <span style="font-size:12px;color:var(--text-secondary);font-weight:600;">من ${v.leave_from||'—'} إلى ${v.leave_to||'—'}</span>
+        </div>
+      `:''}
+      ${v.certificate_name?`<div style="font-size:12px;color:var(--teal-dark);margin-top:4px;">📎 ${v.certificate_name}</div>`:''}
+    </div>
+  `).join('');
+}
+
+function showError(msg){const el=document.getElementById('search-error');el.textContent='⚠️ '+msg;el.style.display='block';}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
+</script>
+</body>
+</html>

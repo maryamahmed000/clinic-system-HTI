@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>شئون الطلاب — نظام العيادة</title>
+<link rel="stylesheet" href="/static/theme.css">
+<style>
+body{display:flex;min-height:100vh;}
+.content{flex:1;padding:24px 30px;display:grid;grid-template-columns:1fr 420px;gap:20px;overflow-y:auto;}
+.ri{border:1.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;background:#fff;}
+.ri::before{content:"";position:absolute;right:0;top:0;bottom:0;width:4px;background:var(--ac,var(--teal));}
+.ri:hover{border-color:var(--teal);box-shadow:var(--shadow-sm);}
+.ri.sel{border-color:var(--teal);background:var(--teal-light);}
+.ri-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.ri-left{display:flex;align-items:center;gap:8px;}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.dot-new{background:var(--red);}
+.dot-done{background:var(--green);}
+.ri-name{font-size:14px;font-weight:800;color:var(--text-primary);}
+.ri-id{font-size:13px;color:var(--teal-dark);font-weight:700;margin-right:4px;}
+.ri-time{font-size:11px;color:var(--text-muted);}
+.ri-diag{font-size:13px;color:var(--text-secondary);margin-bottom:5px;}
+.ri-doc{font-size:12px;color:var(--purple);font-weight:600;margin-bottom:5px;}
+.filter-btn{padding:6px 13px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg-input);font-size:13px;color:var(--text-secondary);cursor:pointer;font-family:inherit;font-weight:600;transition:all .15s;}
+.filter-btn.active{background:var(--teal-light);border-color:var(--teal);color:var(--teal-dark);}
+.ref-card{background:#fff;border:1.5px solid var(--border);border-right:4px solid var(--blue);border-radius:12px;padding:16px;box-shadow:var(--shadow-sm);}
+.ref-title{font-size:12px;color:var(--blue);font-weight:800;letter-spacing:.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.ref-badge{font-size:10px;background:var(--blue-light);border:1px solid #BFDBFE;color:var(--blue);padding:2px 8px;border-radius:8px;}
+.ref-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1.5px solid var(--border);}
+.ref-row:last-child{border-bottom:none;}
+.rk{font-size:12px;color:var(--text-muted);}
+.rv{font-size:14px;color:var(--text-primary);font-weight:700;}
+.rv.id{color:var(--teal-dark);font-size:16px;}
+.rv.doc{color:var(--purple);}
+.rv.leave{color:var(--amber);}
+.form-card{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow-sm);}
+.form-title{font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:14px;}
+.fg{margin-bottom:11px;}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.prev-card{background:var(--blue-light);border:1.5px solid #BFDBFE;border-radius:12px;padding:16px;}
+.prev-head{text-align:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1.5px solid #BFDBFE;}
+.prev-uni{font-size:11px;color:var(--text-muted);}
+.prev-title{font-size:16px;font-weight:800;color:var(--text-primary);margin:4px 0;}
+.prev-num{font-size:11px;color:var(--blue);}
+.prev-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1.5px solid #BFDBFE;font-size:13px;}
+.prev-row:last-child{border-bottom:none;}
+.pk{color:var(--text-muted);}
+.pv{color:var(--text-primary);font-weight:700;}
+.sig-row{display:flex;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1.5px solid #BFDBFE;}
+.sig-box{text-align:center;width:100px;}
+.sig-line{height:1px;background:#93C5FD;margin-bottom:5px;}
+.sig-lbl{font-size:10px;color:var(--text-muted);}
+.btn-row{display:flex;gap:8px;}
+.btn-prev2{background:var(--bg-input);border:1.5px solid var(--border);color:var(--text-secondary);padding:10px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;flex:1;font-family:inherit;}
+.btn-print2{background:linear-gradient(135deg,var(--teal),var(--teal-dark));border:none;color:#fff;padding:10px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;flex:1;font-family:inherit;box-shadow:0 3px 10px rgba(15,158,136,.3);}
+.confirm-banner{padding:10px 14px;background:var(--green-light);border:1.5px solid #A7F3D0;border-radius:8px;color:var(--green);font-size:13px;margin-top:12px;display:none;font-weight:700;}
+.placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--text-muted);text-align:center;border:1.5px solid var(--border);border-radius:16px;background:#fff;}
+.rp{display:flex;flex-direction:column;gap:14px;}
+
+/* Email Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.email-modal{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.modal-title{font-size:17px;font-weight:800;color:#1A2744;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
+.email-tag{display:inline-flex;align-items:center;gap:6px;background:#EBF1FA;border:1.5px solid #BFDBFE;border-radius:8px;padding:5px 10px;font-size:13px;font-weight:600;color:#1B3A6B;margin:3px;}
+.email-tag button{background:none;border:none;color:#DC2626;cursor:pointer;font-size:14px;padding:0;line-height:1;}
+.email-tags-wrap{min-height:44px;border:1.5px solid #D8E2EF;border-radius:9px;padding:6px 10px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:12px;background:#F7F9FC;cursor:text;}
+.email-tags-wrap input{border:none;outline:none;background:transparent;font-size:14px;color:#1A2744;min-width:160px;flex:1;font-family:inherit;padding:3px 0;}
+.pass-field{width:100%;background:#F7F9FC;border:1.5px solid #D8E2EF;border-radius:9px;padding:10px 14px;font-size:14px;color:#1A2744;outline:none;font-family:inherit;margin-bottom:12px;}
+.pass-field:focus{border-color:#1B3A6B;}
+.note-field{width:100%;background:#F7F9FC;border:1.5px solid #D8E2EF;border-radius:9px;padding:10px 14px;font-size:14px;color:#1A2744;outline:none;font-family:inherit;resize:vertical;min-height:70px;margin-bottom:16px;}
+.send-btn{width:100%;padding:13px;background:linear-gradient(135deg,#1B3A6B,#2D5EA8);color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 3px 12px rgba(27,58,107,.3);}
+.send-btn:hover{transform:translateY(-1px);}
+.send-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+.cancel-btn{width:100%;padding:10px;background:transparent;border:1.5px solid #D8E2EF;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:#4A5878;margin-top:8px;}
+.email-result{padding:10px 14px;border-radius:8px;font-size:13px;font-weight:700;margin-top:12px;display:none;}
+.email-ok{background:#D1FAE5;border:1.5px solid #A7F3D0;color:#059669;}
+.email-err{background:#FEE2E2;border:1.5px solid #FECACA;color:#DC2626;}
+.quick-emails{margin-bottom:12px;}
+.quick-label{font-size:12px;color:#4A5878;font-weight:700;margin-bottom:6px;}
+.qe-btn{padding:5px 12px;border-radius:16px;border:1.5px solid #D8E2EF;background:#F7F9FC;font-size:12px;color:#1B3A6B;cursor:pointer;font-family:inherit;font-weight:600;margin:2px;transition:all .15s;}
+.qe-btn:hover{background:#EBF1FA;border-color:#1B3A6B;}
+
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">🏛️</div>
+    <div class="brand-name">شئون الطلاب</div>
+    <div class="brand-sub">المعهد التكنولوجي العالي</div>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="/affairs" class="nav-item active">
+      <span class="nav-icon">📬</span> التقارير الواردة
+      {% if new_count > 0 %}<span class="nav-badge">{{ new_count }}</span>{% endif %}
+    </a>
+    <a href="/affairs/archive" class="nav-item"><span class="nav-icon">📁</span> الأرشيف</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-av">شئ</div>
+      <div><div class="user-name">شئون الطلاب</div><div class="user-role">HTI — السادس من أكتوبر</div></div>
+    </div>
+    <a href="/logout" class="logout-btn">🚪 تسجيل خروج</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">التقارير الطبية الواردة</div>
+      <div class="topbar-sub">من عيادة المعهد — طلاب فقط</div>
+    </div>
+    {% if new_count > 0 %}
+      <div class="badge-new">🔴 {{ new_count }} تقارير جديدة</div>
+    {% else %}
+      <div class="badge-ok">✅ لا توجد تقارير جديدة</div>
+    {% endif %}
+  </div>
+
+  <div class="content">
+    <div>
+      <div class="card">
+        <div class="section-title">الوارد من العياده</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <button class="filter-btn active" onclick="filterR('all',this)">الكل ({{ reports|length }})</button>
+          <button class="filter-btn" onclick="filterR('new',this)">جديد ({{ new_count }})</button>
+          <button class="filter-btn" onclick="filterR('done',this)">تم التقرير</button>
+        </div>
+        <div id="ri-list">
+        {% set acs = ["var(--teal)","var(--amber)","var(--blue)","var(--red)"] %}
+        {% for r in reports %}
+          {% set is_new = r.ar_id is none %}
+          <div class="ri {% if loop.first %}sel{% endif %}"
+               id="ri-{{ r.id }}"
+               style="--ac:{{ acs[loop.index0 % 4] }}"
+               data-status="{{ 'new' if is_new else 'done' }}"
+               onclick="selectReport({{ r.id }}, this)">
+            <div class="ri-top">
+              <div class="ri-left">
+                <div class="dot {{ 'dot-new' if is_new else 'dot-done' }}" id="dot-{{ r.id }}"></div>
+                <span class="ri-name">{{ r.person_name }}</span>
+                <span class="ri-id">{{ r.person_id }}</span>
+              </div>
+              <span class="ri-time">{{ r.visit_date }}</span>
+            </div>
+            <div class="ri-diag">{{ r.diagnosis or "—" }} — {{ r.department or "" }}</div>
+            {% if r.doctor_name %}<div class="ri-doc">🩺 {{ r.doctor_name }}</div>{% endif %}
+            <div class="ri-tags" style="display:flex;gap:5px;flex-wrap:wrap;">
+              {% if r.leave_days and r.leave_days > 0 %}<span class="tag t-amber">إجازة {{ r.leave_days }} أيام</span>{% endif %}
+              {% if r.is_chronic %}<span class="tag t-red">مزمن</span>{% endif %}
+              {% if r.report_reason %}<span class="tag t-blue">{{ r.report_reason }}</span>{% endif %}
+              {% if not is_new %}<span class="tag t-green">تم ✓</span>{% endif %}
+            </div>
+          </div>
+        {% else %}
+          <div style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px;">لا توجد تقارير واردة حتى الآن</div>
+        {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="rp" id="right-panel">
+      {% if reports %}
+        {% set r = reports[0] %}
+        {% set is_new = r.ar_id is none %}
+        <div class="ref-card">
+          <div class="ref-title">📋 بيانات العياده <span class="ref-badge">للمراجعة فقط</span></div>
+          <div class="ref-row"><span class="rk">اسم الطالب</span><span class="rv" id="rp-name">{{ r.person_name }}</span></div>
+          <div class="ref-row"><span class="rk">الكود</span><span class="rv id" id="rp-id">{{ r.person_id }}</span></div>
+          <div class="ref-row"><span class="rk">القسم</span><span class="rv" id="rp-dept">{{ r.department or "—" }}</span></div>
+          <div class="ref-row"><span class="rk">التشخيص</span><span class="rv" id="rp-diag">{{ r.diagnosis or "—" }}</span></div>
+          <div class="ref-row"><span class="rk">مدة الإجازة</span><span class="rv leave" id="rp-leave">{{ r.leave_days or 0 }} أيام</span></div>
+          <div class="ref-row"><span class="rk">تاريخ الزيارة</span><span class="rv" id="rp-date">{{ r.visit_date }}</span></div>
+          <div class="ref-row"><span class="rk">الطبيب المعالج</span><span class="rv doc" id="rp-doctor">{{ r.doctor_name or "—" }}</span></div>
+        </div>
+
+        <!-- تاريخ الطالب الكامل — كل المرات اللي سبق وعمل فيها تقرير -->
+        <div class="card" style="background:#fff;border:1.5px solid var(--border);border-right:4px solid var(--amber);border-radius:12px;padding:16px;box-shadow:var(--shadow-sm);">
+          <div class="ref-title" style="color:var(--amber);">
+            🕓 تاريخ الطالب — كل التقارير السابقة
+          </div>
+          <div id="student-history-list" style="max-height:280px;overflow-y:auto;"></div>
+        </div>
+        {% if is_new %}
+        <div class="form-card" id="new-report-form">
+          <div class="form-title">📝 إنشاء التقرير الرسمي</div>
+          <input type="hidden" id="curr-visit-id" value="{{ r.id }}">
+          <div class="fg"><label class="lbl">نوع الإجراء</label>
+            <select class="field" id="action-type">
+              <option>رفع غياب — إجازة مرضية</option>
+              <option>إعادة جدولة امتحان</option>
+              <option>إخطار هيئة التدريس</option>
+            </select>
+          </div>
+          <div class="row-2">
+            <div class="fg"><label class="lbl">من تاريخ</label><input class="field" id="af-from" type="date" value="{{ r.leave_from or r.visit_date }}"></div>
+            <div class="fg"><label class="lbl">إلى تاريخ</label><input class="field" id="af-to" type="date" value="{{ r.leave_to or "" }}"></div>
+          </div>
+          <div class="fg"><label class="lbl">ملاحظات شئون</label><input class="field" id="affairs-notes" placeholder="أي ملاحظات إدارية..."></div>
+        </div>
+        {% endif %}
+        <div class="prev-card">
+          <div class="prev-head">
+            <div class="prev-uni">المعهد التكنولوجي العالي — شئون الطلاب</div>
+            <div class="prev-title">تقرير إجازة مرضية رسمي</div>
+            <div class="prev-num" id="prev-num">{{ "RPT-" ~ r.ar_id if r.ar_id else "في انتظار الإنشاء" }}</div>
+          </div>
+          <div class="prev-row"><span class="pk">اسم الطالب</span><span class="pv" id="pr-name">{{ r.person_name }}</span></div>
+          <div class="prev-row"><span class="pk">الكود</span><span class="pv" id="pr-id" style="color:var(--teal-dark);">{{ r.person_id }}</span></div>
+          <div class="prev-row"><span class="pk">القسم</span><span class="pv" id="pr-dept">{{ r.department or "—" }}</span></div>
+          <div class="prev-row"><span class="pk">الطبيب المعالج</span><span class="pv" id="pr-doctor" style="color:var(--purple);">{{ r.doctor_name or "—" }}</span></div>
+          <div class="prev-row"><span class="pk">مدة الإجازة</span><span class="pv" id="pr-leave" style="color:var(--amber);">{{ r.leave_days or 0 }} أيام</span></div>
+          <div class="prev-row"><span class="pk">من / إلى</span><span class="pv" id="pr-dates">{{ r.leave_from or "—" }} — {{ r.leave_to or "—" }}</span></div>
+          <div class="sig-row">
+            <div class="sig-box"><div class="sig-line"></div><div class="sig-lbl">شئون الطلاب</div></div>
+            <div class="sig-box"><div class="sig-line"></div><div class="sig-lbl">عميد المعهد</div></div>
+            <div class="sig-box"><div class="sig-line"></div><div class="sig-lbl">الختم</div></div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-prev2" onclick="doPrint()">🖨️ طباعة</button>
+          <button class="btn-prev2" onclick="openEmailModal()" style="background:var(--blue-light);border-color:#BFDBFE;color:#1B3A6B;">📧 إرسال بالإيميل</button>
+          <button class="btn-print2" id="create-btn" onclick="createReport()" {% if not is_new %}style="display:none;"{% endif %}>✅ إنشاء وحفظ</button>
+        </div>
+        <div class="confirm-banner" id="confirm-banner">✅ تم إنشاء التقرير وحفظه بنجاح</div>
+      {% else %}
+        <div class="placeholder">
+          <div style="font-size:44px;margin-bottom:12px;">📭</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">لم تصل تقارير بعد</div>
+          <div style="font-size:13px;">ستظهر هنا عند إرسال الدكتور تقريراً</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+const allReports = {{ reports | tojson }};
+const historyByStudent = {{ history_by_student | tojson }};
+
+function renderStudentHistory(personId, currentVisitId){
+  const histDiv = document.getElementById('student-history-list');
+  if(!histDiv) return;
+  const hist = historyByStudent[personId] || [];
+  if(!hist.length){
+    histDiv.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px;">لا يوجد تاريخ سابق لهذا الطالب</div>';
+    return;
+  }
+  histDiv.innerHTML = hist.map(h => {
+    const isCurrent = h.visit_id === currentVisitId;
+    const statusBadge = h.ar_id
+      ? `<span class="tag t-green">تقرير ${h.report_number || ''} ✓</span>`
+      : '<span class="tag t-amber">بدون تقرير رسمي</span>';
+    return `
+      <div style="border:1.5px solid ${isCurrent?'var(--teal)':'var(--border)'};background:${isCurrent?'var(--teal-light)':'#fff'};border-radius:9px;padding:10px 12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+          <span style="font-size:12px;font-weight:700;color:var(--text-primary);">📅 ${h.visit_date}</span>
+          ${isCurrent ? '<span class="tag t-blue">التقرير الحالي</span>' : ''}
+        </div>
+        <div style="font-size:13px;color:var(--text-primary);font-weight:600;margin-bottom:4px;">${h.diagnosis || '—'}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+          <span style="font-size:12px;color:var(--amber);font-weight:700;">🗓️ ${h.leave_days || 0} ${h.leave_days==1?'يوم':'أيام'} (${h.leave_from||'—'} → ${h.leave_to||'—'})</span>
+          ${statusBadge}
+        </div>
+        ${h.doctor_name ? `<div style="font-size:11px;color:var(--purple);margin-top:4px;">🩺 ${h.doctor_name}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function selectReport(id,el){
+  document.querySelectorAll(".ri").forEach(r=>r.classList.remove("sel"));
+  el.classList.add("sel");
+  document.getElementById("dot-"+id)?.classList.replace("dot-new","dot-done");
+  const r=allReports.find(x=>x.id===id);
+  if(!r)return;
+  document.getElementById("rp-name").textContent=r.person_name||"—";
+  document.getElementById("rp-id").textContent=r.person_id||"—";
+  document.getElementById("rp-dept").textContent=r.department||"—";
+  document.getElementById("rp-diag").textContent=r.diagnosis||"—";
+  document.getElementById("rp-leave").textContent=(r.leave_days||0)+" أيام";
+  document.getElementById("rp-date").textContent=r.visit_date||"—";
+  document.getElementById("rp-doctor").textContent=r.doctor_name||"—";
+  renderStudentHistory(r.person_id, r.id);
+  document.getElementById("pr-name").textContent=r.person_name||"—";
+  document.getElementById("pr-id").textContent=r.person_id||"—";
+  document.getElementById("pr-dept").textContent=r.department||"—";
+  document.getElementById("pr-doctor").textContent=r.doctor_name||"—";
+  document.getElementById("pr-leave").textContent=(r.leave_days||0)+" أيام";
+  document.getElementById("pr-dates").textContent=(r.leave_from||"—")+" — "+(r.leave_to||"—");
+  const isNew=r.ar_id===null||r.ar_id===undefined;
+  const form=document.getElementById("new-report-form"),btn=document.getElementById("create-btn"),conf=document.getElementById("confirm-banner");
+  if(form)form.style.display=isNew?"block":"none";
+  if(btn)btn.style.display=isNew?"block":"none";
+  if(conf)conf.style.display="none";
+  if(document.getElementById("curr-visit-id"))document.getElementById("curr-visit-id").value=r.id;
+  if(document.getElementById("af-from")&&r.leave_from)document.getElementById("af-from").value=r.leave_from;
+  if(document.getElementById("af-to")&&r.leave_to)document.getElementById("af-to").value=r.leave_to;
+  document.getElementById("prev-num").textContent=r.ar_id?"RPT-"+r.ar_id:"في انتظار الإنشاء";
+}
+async function createReport(){
+  const vid=document.getElementById("curr-visit-id")?.value;
+  if(!vid)return;
+  const res=await fetch("/api/create_affairs_report",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({visit_id:parseInt(vid),action_type:document.getElementById("action-type")?.value,leave_from:document.getElementById("af-from")?.value,leave_to:document.getElementById("af-to")?.value,leave_days:parseInt(document.getElementById("rp-leave")?.textContent)||0,affairs_notes:document.getElementById("affairs-notes")?.value})});
+  const d=await res.json();
+  if(d.success){
+    document.getElementById("prev-num").textContent=d.report_number;
+    document.getElementById("confirm-banner").style.display="block";
+    if(document.getElementById("create-btn"))document.getElementById("create-btn").style.display="none";
+    if(document.getElementById("new-report-form"))document.getElementById("new-report-form").style.display="none";
+    const vid2=parseInt(document.getElementById("curr-visit-id")?.value);
+    const rIdx=allReports.findIndex(x=>x.id===vid2);
+    if(rIdx>=0)allReports[rIdx].ar_id=d.ar_id||1;
+    const selRi=document.querySelector(".ri.sel");
+    if(selRi)selRi.dataset.status="done";
+    const dot=document.querySelector(".ri.sel .dot");
+    if(dot){dot.classList.remove("dot-new");dot.classList.add("dot-done");}
+    const tags=document.querySelector(".ri.sel .ri-tags");
+    if(tags&&!tags.innerHTML.includes('تم ✓'))tags.innerHTML+='<span class="tag t-green">تم ✓</span>';
+  }
+}
+function filterR(status,btn){document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));btn.classList.add("active");document.querySelectorAll("#ri-list .ri").forEach(r=>{r.style.display=(status==="all"||r.dataset.status===status)?"":"none";});}
+function doPrint(){const selRi=document.querySelector(".ri.sel");if(!selRi)return;const id=parseInt(selRi.id.replace("ri-",""));const r=allReports.find(x=>x.id===id);if(!r)return;if(r.ar_id){window.open("/print/affairs/"+r.ar_id,"_blank");}else{window.open("/print/report/"+r.id,"_blank");}}
+
+// ── EMAIL ──────────────────────────────────────────────
+let emailList = [];
+let currentArId = null;
+
+function openEmailModal() {
+  const selRi = document.querySelector('.ri.sel');
+  if (!selRi) { alert('اختر تقريراً أولاً'); return; }
+  const rid = parseInt(selRi.id.replace('ri-', ''));
+  const r = allReports.find(x => x.id === rid);
+  if (!r || !r.ar_id) {
+    alert('يجب إنشاء التقرير أولاً قبل الإرسال');
+    return;
+  }
+  currentArId = r.ar_id;
+  emailList = [];
+  renderEmailTags();
+  document.getElementById('email-input').value = '';
+  document.getElementById('email-note').value = '';
+  document.getElementById('email-result').style.display = 'none';
+  document.getElementById('email-modal').classList.add('open');
+  setTimeout(() => document.getElementById('email-input').focus(), 100);
+}
+
+function closeEmailModal() {
+  document.getElementById('email-modal').classList.remove('open');
+}
+
+function addQuickEmail(type) {
+  const map = {
+    student: 'student@hti-o.edu.eg',
+    dept: 'dept_head@hti-o.edu.eg',
+    control: 'control@hti-o.edu.eg'
+  };
+  const labels = {
+    student: 'أدخل إيميل الطالب:',
+    dept: 'أدخل إيميل رئيس القسم:',
+    control: 'أدخل إيميل رئيس الكنترول:'
+  };
+  const email = prompt(labels[type], map[type]);
+  if (email && email.includes('@')) {
+    addEmail(email.trim());
+  }
+}
+
+function handleEmailKey(e) {
+  const input = document.getElementById('email-input');
+  const val = input.value.trim();
+  if ((e.key === 'Enter' || e.key === ',' || e.key === ' ') && val) {
+    e.preventDefault();
+    if (val.includes('@')) {
+      addEmail(val.replace(',', '').trim());
+      input.value = '';
+    }
+  }
+  if (e.key === 'Backspace' && !input.value && emailList.length) {
+    emailList.pop();
+    renderEmailTags();
+  }
+}
+
+function addEmail(email) {
+  if (!emailList.includes(email)) {
+    emailList.push(email);
+    renderEmailTags();
+  }
+}
+
+function removeEmail(idx) {
+  emailList.splice(idx, 1);
+  renderEmailTags();
+}
+
+function renderEmailTags() {
+  const wrap = document.getElementById('email-tags-wrap');
+  const input = document.getElementById('email-input');
+  wrap.querySelectorAll('.email-tag').forEach(t => t.remove());
+  emailList.forEach((email, idx) => {
+    const tag = document.createElement('span');
+    tag.className = 'email-tag';
+    tag.innerHTML = `${email} <button onclick="removeEmail(${idx})">×</button>`;
+    wrap.insertBefore(tag, input);
+  });
+}
+
+async function sendEmail() {
+  // Check any remaining input
+  const inputVal = document.getElementById('email-input').value.trim();
+  if (inputVal && inputVal.includes('@')) addEmail(inputVal);
+  document.getElementById('email-input').value = '';
+
+  if (!emailList.length) {
+    showEmailResult('أضف إيميل واحد على الأقل', false);
+    return;
+  }
+
+  const btn = document.getElementById('send-email-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الإرسال...';
+
+  try {
+    const res = await fetch('/api/send_report_email', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        ar_id: currentArId,
+        to_emails: emailList,
+        note: document.getElementById('email-note').value
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showEmailResult(`✅ تم الإرسال بنجاح إلى ${emailList.join('، ')}`, true);
+      emailList = [];
+      renderEmailTags();
+    } else {
+      showEmailResult('❌ ' + (data.error || 'خطأ في الإرسال'), false);
+    }
+  } catch(err) {
+    showEmailResult('❌ خطأ في الاتصال: ' + err.message, false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📤 إرسال الإيميل';
+  }
+}
+
+function showEmailResult(msg, ok) {
+  const el = document.getElementById('email-result');
+  el.textContent = msg;
+  el.className = 'email-result ' + (ok ? 'email-ok' : 'email-err');
+  el.style.display = 'block';
+}
+
+// Close modal on overlay click
+document.getElementById('email-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeEmailModal();
+});
+
+// عرض تاريخ الطالب الكامل للتقرير المختار افتراضياً عند فتح الصفحة
+if (allReports.length > 0) {
+  renderStudentHistory(allReports[0].person_id, allReports[0].id);
+}
+
+</script>
+
+<!-- Email Modal -->
+<div class="modal-overlay" id="email-modal">
+  <div class="email-modal">
+    <div class="modal-title">📧 إرسال التقرير بالإيميل</div>
+
+    <!-- Quick add buttons -->
+    <div class="quick-emails">
+      <div class="quick-label">إضافة سريعة:</div>
+      <button class="qe-btn" onclick="addQuickEmail('student')">🎓 إيميل الطالب</button>
+      <button class="qe-btn" onclick="addQuickEmail('dept')">🏛️ رئيس القسم</button>
+      <button class="qe-btn" onclick="addQuickEmail('control')">📋 رئيس الكنترول</button>
+    </div>
+
+    <!-- Email tags input -->
+    <div class="quick-label">إيميلات الاستلام (@hti-o.edu.eg):</div>
+    <div class="email-tags-wrap" id="email-tags-wrap" onclick="document.getElementById('email-input').focus()">
+      <input id="email-input" type="email" placeholder="اكتب الإيميل واضغط Enter أو فاصلة..."
+             onkeydown="handleEmailKey(event)" oninput="this.size=Math.max(20,this.value.length)">
+    </div>
+
+    <div style="background:#D1FAE5;border:1px solid #A7F3D0;border-radius:8px;padding:8px 12px;font-size:12px;color:#065F46;margin-bottom:14px;line-height:1.6;">
+      ✅ الإرسال بيتم تلقائياً من إيميل الشئون — لا حاجة لكتابة كلمة مرور.
+    </div>
+
+    <!-- Note -->
+    <div class="quick-label">ملاحظة إضافية (اختياري):</div>
+    <textarea class="note-field" id="email-note" placeholder="أي ملاحظة تضاف للإيميل..."></textarea>
+
+    <button class="send-btn" id="send-email-btn" onclick="sendEmail()">📤 إرسال الإيميل</button>
+    <button class="cancel-btn" onclick="closeEmailModal()">إلغاء</button>
+    <div class="email-result" id="email-result"></div>
+  </div>
+</div>
+
+</body>
+</html>

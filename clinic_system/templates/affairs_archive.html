@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>الأرشيف — شئون الطلاب</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:#F0F4F8;min-height:100vh;display:flex;direction:rtl;}
+.sidebar{width:220px;background:#1B3A6B;border-left:none;display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:fixed;right:0;top:0;bottom:0;}
+.logo{padding:0 20px 24px;border-bottom:1px solid #D8E2EF;}
+.logo-icon{width:44px;height:44px;background:linear-gradient(135deg,#7B61FF,#5A3FCC);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:10px;}
+.logo-text{font-size:14px;font-weight:700;color:#E8EDF2;}
+.logo-sub{font-size:11px;color:#4A5878;margin-top:2px;}
+.nav{padding:16px 0;flex:1;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 20px;cursor:pointer;margin:2px 10px;border-radius:8px;text-decoration:none;}
+.nav-item:hover{background:#1E1535;}
+.nav-item.active{background:rgba(123,97,255,.15);border:1px solid rgba(123,97,255,.3);}
+.nav-icon{font-size:16px;color:#4A5878;width:20px;text-align:center;}
+.nav-item.active .nav-icon,.nav-item.active .nav-label{color:#7B61FF;font-weight:600;}
+.nav-label{font-size:13px;color:#7A7099;}
+.sidebar-footer{padding:16px 20px;border-top:1px solid #1E1535;}
+.main{flex:1;margin-right:220px;display:flex;flex-direction:column;}
+.topbar{background:#1B3A6B;border-bottom:1px solid #D8E2EF;padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.topbar-title{font-size:18px;font-weight:700;color:#E8EDF2;}
+.topbar-sub{font-size:12px;color:#4A5878;margin-top:2px;}
+.content{flex:1;padding:24px 32px;}
+.card{background:#fff;border:1.5px solid #D8E2EF;border-radius:16px;padding:22px;}
+.section-title{font-size:11px;font-weight:700;color:#4A5878;letter-spacing:1px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.section-title::before{content:'';width:3px;height:12px;background:#7B61FF;border-radius:2px;}
+table{width:100%;border-collapse:collapse;}
+thead th{font-size:11px;color:#4A5878;font-weight:700;padding:8px 12px;text-align:right;border-bottom:1px solid #D8E2EF;}
+tbody tr:hover{background:#1A1130;}
+tbody td{padding:10px 12px;font-size:12px;color:#1A2744;border-bottom:1px solid #1A1130;}
+.tag{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700;}
+.t-g{background:rgba(0,201,167,.1);color:#059669;border:1px solid rgba(0,201,167,.2);}
+.t-p{background:rgba(123,97,255,.1);color:#7B61FF;border:1px solid rgba(123,97,255,.2);}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🏛️</div>
+    <div class="logo-text">شئون الطلاب</div>
+    <div class="logo-sub">HTI — السادس من أكتوبر</div>
+  </div>
+  <nav class="nav">
+    <a href="/affairs" class="nav-item"><span class="nav-icon">📬</span><span class="nav-label">التقارير الواردة</span></a>
+    <a href="/affairs/archive" class="nav-item active"><span class="nav-icon">📁</span><span class="nav-label">الأرشيف</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <div style="font-size:12px;color:#7A7099;margin-bottom:8px;">شئون الطلاب</div>
+    <a href="/logout" style="display:block;text-align:center;font-size:11px;color:#4A5878;text-decoration:none;padding:6px;border-radius:6px;border:1.5px solid #D8E2EF;">🚪 تسجيل خروج</a>
+  </div>
+</div>
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">📁 أرشيف التقارير</div>
+      <div class="topbar-sub">التقارير المكتملة — طلاب فقط</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="font-size:13px;color:#4A5878;font-weight:700;">{{ reports|length }} تقرير</span>
+      <a href="/affairs/archive/export"
+         style="background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:8px 18px;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 3px 10px rgba(5,150,105,.3);">
+        📥 تنزيل Excel
+      </a>
+    </div>
+  </div>
+  <div class="content">
+    <div class="card">
+      <div class="section-title">التقارير المكتملة</div>
+      {% if reports %}
+      <table>
+        <thead>
+          <tr>
+            <th>رقم التقرير</th>
+            <th>اسم الطالب</th>
+            <th>الكود</th>
+            <th>القسم</th>
+            <th>التشخيص</th>
+            <th>الإجازة</th>
+            <th>تاريخ التقرير</th>
+            <th>الحالة</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in reports %}
+          <tr>
+            <td style="color:#1B3A6B;font-weight:700;">{{ r.report_number }}</td>
+            <td style="color:#1A2744;font-weight:700;">{{ r.person_name }}</td>
+            <td style="color:#059669;">{{ r.person_id }}</td>
+            <td>{{ r.department or '—' }}</td>
+            <td>{{ r.diagnosis or '—' }}</td>
+            <td>{% if r.leave_days %}<span class="tag t-p">{{ r.leave_days }} أيام</span>{% else %}—{% endif %}</td>
+            <td>{{ r.ar_date[:10] if r.ar_date else '—' }}</td>
+            <td><span class="tag t-g">تم ✓</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div style="text-align:center;padding:40px;color:#4A5878;">لا توجد تقارير مكتملة بعد</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</body>
+</html>
