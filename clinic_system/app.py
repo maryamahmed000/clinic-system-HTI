@@ -452,21 +452,25 @@ def get_graph_access_token():
 
     ONEDRIVE_EMAIL    = os.environ.get('ONEDRIVE_EMAIL', '')
     ONEDRIVE_PASSWORD = os.environ.get('ONEDRIVE_PASSWORD', '')
-    CLIENT_ID         = os.environ.get('GRAPH_CLIENT_ID', '')
-    TENANT            = os.environ.get('GRAPH_TENANT', 'common')
+    CLIENT_ID     = os.environ.get('GRAPH_CLIENT_ID', '')
+    CLIENT_SECRET = os.environ.get('GRAPH_CLIENT_SECRET', '')
+    TENANT        = os.environ.get('GRAPH_TENANT', '')
 
-    if not (ONEDRIVE_EMAIL and ONEDRIVE_PASSWORD and CLIENT_ID):
-        return None, 'بيانات الاتصال بحساب مايكروسوفت غير مُعدة (راجع .env)'
+    if not all([CLIENT_ID, CLIENT_SECRET, TENANT]):
+        missing = [k for k, v in {
+            'GRAPH_CLIENT_ID': CLIENT_ID,
+            'GRAPH_CLIENT_SECRET': CLIENT_SECRET,
+            'GRAPH_TENANT': TENANT,
+        }.items() if not v]
+        return None, f'متغيرات بيئة ناقصة: {", ".join(missing)}'
 
     try:
         token_url = f"https://login.microsoftonline.com/{TENANT}/oauth2/v2.0/token"
         token_resp = req.post(token_url, data={
-            'client_id': CLIENT_ID,
-            'scope': 'https://graph.microsoft.com/Files.ReadWrite '
-                     'https://graph.microsoft.com/Mail.Send offline_access',
-            'username': ONEDRIVE_EMAIL,
-            'password': ONEDRIVE_PASSWORD,
-            'grant_type': 'password',
+            'client_id':     CLIENT_ID,
+            'client_secret': CLIENT_SECRET,
+            'scope':         'https://graph.microsoft.com/.default',
+            'grant_type':    'client_credentials',
         }, timeout=15)
 
         if token_resp.status_code != 200:
@@ -474,12 +478,12 @@ def get_graph_access_token():
                 err = token_resp.json().get('error_description', token_resp.text[:300])
             except Exception:
                 err = token_resp.text[:300] if token_resp.text else f'HTTP {token_resp.status_code}'
-            return None, f'فشل تسجيل الدخول بحساب مايكروسوفت: {err}'
+            return None, f'فشل الحصول على توكن Azure: {err}'
 
         try:
             access_token = token_resp.json().get('access_token')
         except Exception:
-            return None, 'استجابة غير متوقعة من مايكروسوفت (تحقق من الاتصال بالإنترنت)'
+            return None, 'استجابة غير متوقعة من مايكروسوفت'
 
         if not access_token:
             return None, 'لم يتم الحصول على access token'
@@ -517,8 +521,9 @@ def send_email_via_graph(to_emails, subject, html_body):
     }
 
     try:
+        import requests as req
         resp = req.post(
-            "https://graph.microsoft.com/v1.0/me/sendMail",
+            f"https://graph.microsoft.com/v1.0/users/{ONEDRIVE_EMAIL}/sendMail",
             headers={
                 'Authorization': f'Bearer {access_token}',
                 'Content-Type': 'application/json',
