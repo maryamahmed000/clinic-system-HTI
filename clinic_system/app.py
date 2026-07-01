@@ -540,68 +540,63 @@ def send_email_via_graph(to_emails, subject, html_body):
 
 
 def upload_to_onedrive(student_id, filename, file_bytes):
-    """رفع ملف على OneDrive بدون أي تسجيل دخول (بدون Email/Password/MFA).
+    """رفع ملف على OneDrive باستخدام Client Credentials (بدون MFA/password).
 
-    الطريقة: استخدام رابط مشاركة على المجلد بصلاحية "Anyone with the link
-    can edit" (ضيف/تعديل لأي شخص معه الرابط). Microsoft Graph بيسمح
-    بالتعامل مع الروابط دي بدون توكن مصادقة مستخدم خالص — وده بيتجنب
-    مشكلة الـ MFA تماماً.
-
-    لازم متغير البيئة ONEDRIVE_FOLDER_URL يكون رابط مشاركة من نوع
-    "Anyone with the link can edit" (مش رابط داخلي بصلاحيات الحساب فقط).
+    الطريقة: Client Credentials Flow — التطبيق بيحصل على توكن بـ
+    client_id + client_secret بدون أي تدخل من المستخدم.
+    يحتاج صلاحية Files.ReadWrite.All (Application) في Azure.
     """
     try:
         import requests as req
     except ImportError:
-        return {'success': False, 'error': 'مكتبة requests غير مثبتة — شغّلي: pip install requests'}
+        return {'success': False, 'error': 'مكتبة requests غير مثبتة'}
 
-    import base64
+    CLIENT_ID     = os.environ.get('GRAPH_CLIENT_ID', '')
+    CLIENT_SECRET = os.environ.get('GRAPH_CLIENT_SECRET', '')
+    TENANT        = os.environ.get('GRAPH_TENANT', '')
+    ONEDRIVE_USER = os.environ.get('ONEDRIVE_EMAIL', '')
 
-    FOLDER_URL = os.environ.get('ONEDRIVE_FOLDER_URL', '')
-
-    if not FOLDER_URL:
-        return {'success': False, 'error': 'رابط مجلد OneDrive غير مُعد (ONEDRIVE_FOLDER_URL في .env)'}
+    if not all([CLIENT_ID, CLIENT_SECRET, TENANT, ONEDRIVE_USER]):
+        missing = [k for k, v in {
+            'GRAPH_CLIENT_ID': CLIENT_ID,
+            'GRAPH_CLIENT_SECRET': CLIENT_SECRET,
+            'GRAPH_TENANT': TENANT,
+            'ONEDRIVE_EMAIL': ONEDRIVE_USER
+        }.items() if not v]
+        return {'success': False,
+                'error': f'متغيرات بيئة ناقصة: {", ".join(missing)}'}
 
     try:
-        # تحويل رابط المشاركة لـ shareId يفهمه Microsoft Graph
-        clean_url = FOLDER_URL.split('?')[0]
-        b64 = base64.urlsafe_b64encode(clean_url.encode('utf-8')).decode('utf-8').rstrip('=')
-        share_id = f"u!{b64}"
+        # 1) الحصول على Access Token بـ Client Credentials (لا يوجد MFA)
+        token_url = f"https://login.microsoftonline.com/{TENANT}/oauth2/v2.0/token"
+        token_resp = req.post(token_url, data={
+            'client_id':     CLIENT_ID,
+            'client_secret': CLIENT_SECRET,
+            'scope':         'https://graph.microsoft.com/.default',
+            'grant_type':    'client_credentials',
+        }, timeout=15)
 
-        # 1) معرفة بيانات المجلد (driveId + itemId) من رابط المشاركة نفسه
-        #    بدون أي توكن — الطلب ده بيتعامل كـ "زائر" بصلاحية الرابط
-        folder_resp = req.get(
-            f"https://graph.microsoft.com/v1.0/shares/{share_id}/driveItem",
-            timeout=15
-        )
+        if token_resp.status_code != 200:
+            err = token_resp.json().get('error_description', token_resp.text[:300])
+            return {'success': False, 'error': f'فشل الحصول على توكن Azure: {err}'}
 
-        if folder_resp.status_code != 200:
-            return {
-                'success': False,
-                'error': (
-                    'فشل الوصول لمجلد OneDrive عبر الرابط. تأكدي إن صلاحية '
-                    'الرابط "Anyone with the link can edit" مفعّلة. '
-                    f'({folder_resp.status_code})'
-                )
-            }
+        access_token = token_resp.json().get('access_token')
+        if not access_token:
+            return {'success': False, 'error': 'لم يتم الحصول على access token'}
 
-        fd = folder_resp.json()
-        drive_id  = fd.get('parentReference', {}).get('driveId', '') or fd.get('id', '')
-        folder_id = fd.get('id', '')
-
-        if not (drive_id and folder_id):
-            return {'success': False, 'error': 'تعذّر تحديد مجلد الرفع من الرابط المُعطى'}
-
-        # 2) رفع الملف داخل مجلد فرعي باسم كود الطالب، بنفس صلاحية الرابط
+        # 2) رفع الملف مباشرة في OneDrive الخاص بـ ONEDRIVE_USER
         upload_url = (
             f"https://graph.microsoft.com/v1.0"
-            f"/drives/{drive_id}/items/{folder_id}"
-            f":/{student_id}/{filename}:/content"
+            f"/users/{ONEDRIVE_USER}/drive/root"
+            f":/العياده/{student_id}/{filename}:/content"
         )
 
         upload_resp = req.put(
             upload_url,
-            headers={'Content-Type': 'application/octet-stream'},
+            headers={
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type':  'application/octet-stream',
+            },
             data=file_bytes,
             timeout=30
         )
@@ -609,7 +604,8 @@ def upload_to_onedrive(student_id, filename, file_bytes):
         if upload_resp.status_code in (200, 201):
             return {'success': True, 'web_url': upload_resp.json().get('webUrl', '')}
         else:
-            return {'success': False, 'error': f'فشل الرفع: {upload_resp.status_code} — {upload_resp.text[:250]}'}
+            return {'success': False,
+                    'error': f'فشل الرفع: {upload_resp.status_code} — {upload_resp.text[:250]}'}
 
     except Exception as e:
         return {'success': False, 'error': str(e)}
