@@ -257,6 +257,43 @@ textarea.field{resize:vertical;min-height:72px;}
         <button class="sbtn sbtn-submit" onclick="saveVisit(true)">📤 حفظ وإرسال لشئون الطلاب</button>
         <button class="sbtn sbtn-save" onclick="saveVisit(false)">💾 حفظ بدون إرسال</button>
       </div>
+
+      <!-- كارت إرسال إيميل لموظف -->
+      <div class="submit-card" style="border-top:2px solid #0f9e88;">
+        <div class="sl" style="color:#0f9e88;margin-bottom:10px;">📧 إرسال إيميل لموظف</div>
+        <div style="position:relative;">
+          <input type="text" id="emp-search-input"
+            placeholder="ابحث باسم الموظف..."
+            oninput="searchEmployees(this.value)"
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);
+                   border-radius:8px;font-size:13px;font-family:inherit;
+                   background:var(--bg-input);color:var(--text);
+                   box-sizing:border-box;margin-bottom:8px;">
+          <div id="emp-results"
+               style="display:none;position:absolute;width:100%;top:42px;
+                      background:var(--card);border:1.5px solid var(--border);
+                      border-radius:8px;z-index:200;max-height:180px;
+                      overflow-y:auto;box-shadow:0 6px 20px rgba(0,0,0,.15);">
+          </div>
+        </div>
+        <div id="emp-selected"
+             style="display:none;background:#e8faf7;border:1.5px solid #0f9e88;
+                    border-radius:8px;padding:9px 12px;margin-bottom:8px;font-size:13px;">
+          <div style="font-weight:700;" id="emp-sel-name"></div>
+          <div style="color:#0f9e88;font-size:12px;" id="emp-sel-email"></div>
+          <button onclick="clearEmp()"
+            style="float:left;background:none;border:none;cursor:pointer;
+                   color:#e74c3c;font-size:15px;padding:0;line-height:1;">✕</button>
+        </div>
+        <button onclick="sendEmpEmail()"
+          style="width:100%;padding:10px;background:linear-gradient(135deg,#0f9e88,#0a7a6b);
+                 color:#fff;border:none;border-radius:8px;cursor:pointer;
+                 font-size:13px;font-family:inherit;font-weight:600;">
+          📨 إرسال للموظف المحدد
+        </button>
+        <div id="emp-result-msg"
+             style="margin-top:8px;font-size:12px;text-align:center;min-height:18px;"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -469,6 +506,86 @@ async function saveVisit(submitToAffairs){
   setTimeout(()=>window.location.href='/doctor',1800);
 }
 function showToast(msg,bg='var(--teal)'){const t=document.getElementById('toast');t.textContent=msg;t.style.background=bg;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
+
+// ===== Employee Email =====
+let _selEmp = null, _empTimer = null;
+
+function searchEmployees(q) {
+  clearTimeout(_empTimer);
+  const box = document.getElementById('emp-results');
+  if (q.length < 2) { box.style.display='none'; return; }
+  _empTimer = setTimeout(async () => {
+    try {
+      const res  = await fetch('/api/search_employees?q='+encodeURIComponent(q));
+      const data = await res.json();
+      const list = data.results || [];
+      box.innerHTML = list.length === 0
+        ? '<div style="padding:10px;color:var(--text-muted);text-align:center;font-size:13px;">لا نتائج</div>'
+        : list.map(u=>`
+            <div onclick='pickEmp(${JSON.stringify(u)})'
+              style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);"
+              onmouseover="this.style.background='#e8faf7'"
+              onmouseout="this.style.background=''">
+              <div style="font-weight:600;font-size:13px;">${u.name}</div>
+              <div style="font-size:11px;color:var(--text-muted);">${u.email}${u.department?' — '+u.department:''}</div>
+            </div>`).join('');
+      box.style.display = 'block';
+    } catch(e) { box.style.display='none'; }
+  }, 400);
+}
+
+function pickEmp(u) {
+  _selEmp = u;
+  document.getElementById('emp-search-input').value = '';
+  document.getElementById('emp-results').style.display = 'none';
+  document.getElementById('emp-sel-name').textContent  = u.name;
+  document.getElementById('emp-sel-email').textContent = u.email;
+  document.getElementById('emp-selected').style.display = 'block';
+  document.getElementById('emp-result-msg').textContent = '';
+}
+
+function clearEmp() {
+  _selEmp = null;
+  document.getElementById('emp-selected').style.display = 'none';
+  document.getElementById('emp-result-msg').textContent = '';
+}
+
+async function sendEmpEmail() {
+  if (!_selEmp) { showToast('اختار موظف الأول','#e74c3c'); return; }
+  const msg = document.getElementById('emp-result-msg');
+  msg.textContent = '⏳ جاري الإرسال...'; msg.style.color='var(--text-muted)';
+  try {
+    const diag  = document.getElementById('diagnosis')?.value?.trim() || '';
+    const notes = document.getElementById('notes')?.value?.trim() || '';
+    const meds  = Array.from(document.querySelectorAll('.med-btn.selected'))
+                       .map(b => b.dataset.name || b.textContent.trim());
+    const res  = await fetch('/api/send_employee_email',{
+      method:'POST', credentials:'same-origin',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        to_email:  _selEmp.email,
+        to_name:   _selEmp.name,
+        patient:   document.getElementById('mini-name')?.textContent || '',
+        diagnosis: diag, medicines: meds, notes: notes
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      msg.textContent = '✅ أُرسل لـ ' + _selEmp.name;
+      msg.style.color = '#0f9e88';
+    } else {
+      msg.textContent = '❌ ' + (data.error||'فشل الإرسال');
+      msg.style.color = '#e74c3c';
+    }
+  } catch(e) {
+    msg.textContent = '❌ خطأ في الاتصال'; msg.style.color='#e74c3c';
+  }
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#emp-search-input') && !e.target.closest('#emp-results'))
+    document.getElementById('emp-results').style.display = 'none';
+});
 </script>
 </body>
 </html>
