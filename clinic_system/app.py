@@ -376,6 +376,71 @@ def api_search():
     except Exception as e:
         return jsonify({'found': False, 'message': str(e)})
 
+@app.route('/api/search_employees')
+def api_search_employees():
+    """بحث عن موظفين من Azure AD باستخدام User.Read.All."""
+    if 'user' not in session:
+        return jsonify({'error': 'غير مسجل الدخول'}), 401
+    q = request.args.get('q', '').strip()
+    if not q or len(q) < 2:
+        return jsonify({'results': []})
+    results = search_employees_in_azure(q)
+    return jsonify({'results': results})
+
+
+@app.route('/api/send_employee_email', methods=['POST'])
+def api_send_employee_email():
+    """إرسال إيميل لموظف من الدكتور."""
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'غير مسجل الدخول'})
+    data = request.get_json() or {}
+    to_email    = data.get('to_email', '').strip()
+    to_name     = data.get('to_name', '')
+    patient     = data.get('patient', '')
+    diagnosis   = data.get('diagnosis', '')
+    medicines   = data.get('medicines', [])
+    notes       = data.get('notes', '')
+    doctor_name = session.get('user', 'الطبيب')
+
+    if not to_email:
+        return jsonify({'success': False, 'error': 'البريد الإلكتروني للموظف مطلوب'})
+
+    meds_html = ''.join(f'<li>{m}</li>' for m in medicines) if medicines else '<li>لا يوجد</li>'
+
+    html_body = f"""
+    <div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:auto;
+                          border:1px solid #ddd;border-radius:8px;overflow:hidden;">
+      <div style="background:#1a3c5e;color:white;padding:16px;text-align:center;">
+        <h2 style="margin:0;">نظام عيادة المعهد التكنولوجي العالي</h2>
+        <p style="margin:4px 0;font-size:13px;">clinic@hti-o.edu.eg</p>
+      </div>
+      <div style="padding:20px;">
+        <p>السيد/ة <strong>{to_name}</strong>،</p>
+        <p>يُحيطكم علماً بأن الطالب/الموظف <strong>{patient}</strong>
+           قد تلقى العلاج في عيادة المعهد.</p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+          <tr style="background:#f0f4f8;">
+            <th style="padding:8px;border:1px solid #ccc;text-align:right;">التشخيص</th>
+            <td style="padding:8px;border:1px solid #ccc;">{diagnosis or 'غير محدد'}</td>
+          </tr>
+          <tr>
+            <th style="padding:8px;border:1px solid #ccc;text-align:right;">الأدوية الموصوفة</th>
+            <td style="padding:8px;border:1px solid #ccc;"><ul style="margin:0;padding-right:16px;">{meds_html}</ul></td>
+          </tr>
+          {'<tr style="background:#f0f4f8;"><th style="padding:8px;border:1px solid #ccc;text-align:right;">ملاحظات</th><td style="padding:8px;border:1px solid #ccc;">' + notes + '</td></tr>' if notes else ''}
+        </table>
+        <p style="color:#555;font-size:13px;">الطبيب المعالج: <strong>{doctor_name}</strong></p>
+      </div>
+      <div style="background:#f0f4f8;padding:10px;text-align:center;font-size:12px;color:#777;">
+        عيادة المعهد التكنولوجي العالي بالسادس من أكتوبر
+      </div>
+    </div>
+    """
+
+    result = send_email_via_graph([to_email], f'تقرير طبي — {patient}', html_body)
+    return jsonify(result)
+
+
 @app.route('/api/medicines')
 def api_medicines():
     conn = get_db()
@@ -441,28 +506,20 @@ def upload_certificate():
 
 
 def get_graph_access_token():
-    """Get an access token from Microsoft Graph using Resource Owner Password
-    Credentials flow. Shared by OneDrive upload and email sending.
-    Returns (access_token, error_message). access_token is None on failure.
+    """Get Microsoft Graph access token using Client Credentials (no MFA issues).
+    Returns (access_token, error_message).
     """
     try:
         import requests as req
     except ImportError:
-        return None, 'مكتبة requests غير مثبتة — شغّلي: pip install requests'
+        return None, 'مكتبة requests غير مثبتة'
 
-    ONEDRIVE_EMAIL    = os.environ.get('ONEDRIVE_EMAIL', '')
-    ONEDRIVE_PASSWORD = os.environ.get('ONEDRIVE_PASSWORD', '')
     CLIENT_ID     = os.environ.get('GRAPH_CLIENT_ID', '')
     CLIENT_SECRET = os.environ.get('GRAPH_CLIENT_SECRET', '')
     TENANT        = os.environ.get('GRAPH_TENANT', '')
 
     if not all([CLIENT_ID, CLIENT_SECRET, TENANT]):
-        missing = [k for k, v in {
-            'GRAPH_CLIENT_ID': CLIENT_ID,
-            'GRAPH_CLIENT_SECRET': CLIENT_SECRET,
-            'GRAPH_TENANT': TENANT,
-        }.items() if not v]
-        return None, f'متغيرات بيئة ناقصة: {", ".join(missing)}'
+        return None, 'متغيرات Azure غير مكتملة (GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET, GRAPH_TENANT)'
 
     try:
         token_url = f"https://login.microsoftonline.com/{TENANT}/oauth2/v2.0/token"
@@ -477,14 +534,10 @@ def get_graph_access_token():
             try:
                 err = token_resp.json().get('error_description', token_resp.text[:300])
             except Exception:
-                err = token_resp.text[:300] if token_resp.text else f'HTTP {token_resp.status_code}'
+                err = token_resp.text[:300]
             return None, f'فشل الحصول على توكن Azure: {err}'
 
-        try:
-            access_token = token_resp.json().get('access_token')
-        except Exception:
-            return None, 'استجابة غير متوقعة من مايكروسوفت'
-
+        access_token = token_resp.json().get('access_token')
         if not access_token:
             return None, 'لم يتم الحصول على access token'
 
@@ -494,22 +547,54 @@ def get_graph_access_token():
         return None, str(e)
 
 
-def send_email_via_graph(to_emails, subject, html_body):
-    """Send an email using Microsoft Graph /sendMail endpoint instead of SMTP.
-    Works even when the account has Two-Factor Authentication enabled,
-    as long as the same Azure App Registration used for OneDrive has the
-    Mail.Send permission granted.
-    """
+def search_employees_in_azure(query):
+    """Search employees by name in Azure AD using User.Read.All permission."""
     try:
         import requests as req
     except ImportError:
-        return {'success': False, 'error': 'مكتبة requests غير مثبتة — شغّلي: pip install requests'}
+        return []
+
+    access_token, err = get_graph_access_token()
+    if not access_token:
+        return []
+
+    try:
+        resp = req.get(
+            f"https://graph.microsoft.com/v1.0/users"
+            f"?$filter=startswith(displayName,'{query}') or startswith(givenName,'{query}')"
+            f"&$select=displayName,mail,jobTitle,department"
+            f"&$top=10",
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=10
+        )
+        if resp.status_code == 200:
+            users = resp.json().get('value', [])
+            return [
+                {
+                    'name':       u.get('displayName', ''),
+                    'email':      u.get('mail', ''),
+                    'title':      u.get('jobTitle', ''),
+                    'department': u.get('department', ''),
+                }
+                for u in users if u.get('mail')
+            ]
+    except Exception:
+        pass
+    return []
+
+
+def send_email_via_graph(to_emails, subject, html_body):
+    """Send email using Microsoft Graph API (Client Credentials — no MFA)."""
+    try:
+        import requests as req
+    except ImportError:
+        return {'success': False, 'error': 'مكتبة requests غير مثبتة'}
 
     access_token, err = get_graph_access_token()
     if not access_token:
         return {'success': False, 'error': err}
 
-    ONEDRIVE_EMAIL = os.environ.get('ONEDRIVE_EMAIL', '')
+    CLINIC_EMAIL = os.environ.get('ONEDRIVE_EMAIL', '')
 
     message = {
         "message": {
@@ -521,12 +606,11 @@ def send_email_via_graph(to_emails, subject, html_body):
     }
 
     try:
-        import requests as req
         resp = req.post(
-            f"https://graph.microsoft.com/v1.0/users/{ONEDRIVE_EMAIL}/sendMail",
+            f"https://graph.microsoft.com/v1.0/users/{CLINIC_EMAIL}/sendMail",
             headers={
                 'Authorization': f'Bearer {access_token}',
-                'Content-Type': 'application/json',
+                'Content-Type':  'application/json',
             },
             json=message,
             timeout=20
@@ -545,57 +629,23 @@ def send_email_via_graph(to_emails, subject, html_body):
 
 
 def upload_to_onedrive(student_id, filename, file_bytes):
-    """رفع ملف على OneDrive باستخدام Client Credentials (بدون MFA/password).
-
-    الطريقة: Client Credentials Flow — التطبيق بيحصل على توكن بـ
-    client_id + client_secret بدون أي تدخل من المستخدم.
-    يحتاج صلاحية Files.ReadWrite.All (Application) في Azure.
-    """
+    """رفع ملف على OneDrive باستخدام Client Credentials (بدون MFA)."""
     try:
         import requests as req
     except ImportError:
         return {'success': False, 'error': 'مكتبة requests غير مثبتة'}
 
-    CLIENT_ID     = os.environ.get('GRAPH_CLIENT_ID', '')
-    CLIENT_SECRET = os.environ.get('GRAPH_CLIENT_SECRET', '')
-    TENANT        = os.environ.get('GRAPH_TENANT', '')
     ONEDRIVE_USER = os.environ.get('ONEDRIVE_EMAIL', '')
-
-    if not all([CLIENT_ID, CLIENT_SECRET, TENANT, ONEDRIVE_USER]):
-        missing = [k for k, v in {
-            'GRAPH_CLIENT_ID': CLIENT_ID,
-            'GRAPH_CLIENT_SECRET': CLIENT_SECRET,
-            'GRAPH_TENANT': TENANT,
-            'ONEDRIVE_EMAIL': ONEDRIVE_USER
-        }.items() if not v]
-        return {'success': False,
-                'error': f'متغيرات بيئة ناقصة: {", ".join(missing)}'}
+    access_token, err = get_graph_access_token()
+    if not access_token:
+        return {'success': False, 'error': err}
 
     try:
-        # 1) الحصول على Access Token بـ Client Credentials (لا يوجد MFA)
-        token_url = f"https://login.microsoftonline.com/{TENANT}/oauth2/v2.0/token"
-        token_resp = req.post(token_url, data={
-            'client_id':     CLIENT_ID,
-            'client_secret': CLIENT_SECRET,
-            'scope':         'https://graph.microsoft.com/.default',
-            'grant_type':    'client_credentials',
-        }, timeout=15)
-
-        if token_resp.status_code != 200:
-            err = token_resp.json().get('error_description', token_resp.text[:300])
-            return {'success': False, 'error': f'فشل الحصول على توكن Azure: {err}'}
-
-        access_token = token_resp.json().get('access_token')
-        if not access_token:
-            return {'success': False, 'error': 'لم يتم الحصول على access token'}
-
-        # 2) رفع الملف مباشرة في OneDrive الخاص بـ ONEDRIVE_USER
         upload_url = (
             f"https://graph.microsoft.com/v1.0"
             f"/users/{ONEDRIVE_USER}/drive/root"
             f":/العياده/{student_id}/{filename}:/content"
         )
-
         upload_resp = req.put(
             upload_url,
             headers={
@@ -605,12 +655,71 @@ def upload_to_onedrive(student_id, filename, file_bytes):
             data=file_bytes,
             timeout=30
         )
-
         if upload_resp.status_code in (200, 201):
             return {'success': True, 'web_url': upload_resp.json().get('webUrl', '')}
         else:
             return {'success': False,
-                    'error': f'فشل الرفع: {upload_resp.status_code} — {upload_resp.text[:250]}'}
+                    'error': f'فشل الرفع: {upload_resp.status_code} — {upload_resp.text[:200]}'}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
+def _UNUSED_old_upload(student_id, filename, file_bytes):
+    """[deprecated] kept for reference"""
+    import base64
+    FOLDER_URL = os.environ.get('ONEDRIVE_FOLDER_URL', '')
+
+    if not FOLDER_URL:
+        return {'success': False, 'error': 'رابط مجلد OneDrive غير مُعد (ONEDRIVE_FOLDER_URL في .env)'}
+
+    try:
+        # تحويل رابط المشاركة لـ shareId يفهمه Microsoft Graph
+        clean_url = FOLDER_URL.split('?')[0]
+        b64 = base64.urlsafe_b64encode(clean_url.encode('utf-8')).decode('utf-8').rstrip('=')
+        share_id = f"u!{b64}"
+
+        # 1) معرفة بيانات المجلد (driveId + itemId) من رابط المشاركة نفسه
+        #    بدون أي توكن — الطلب ده بيتعامل كـ "زائر" بصلاحية الرابط
+        folder_resp = req.get(
+            f"https://graph.microsoft.com/v1.0/shares/{share_id}/driveItem",
+            timeout=15
+        )
+
+        if folder_resp.status_code != 200:
+            return {
+                'success': False,
+                'error': (
+                    'فشل الوصول لمجلد OneDrive عبر الرابط. تأكدي إن صلاحية '
+                    'الرابط "Anyone with the link can edit" مفعّلة. '
+                    f'({folder_resp.status_code})'
+                )
+            }
+
+        fd = folder_resp.json()
+        drive_id  = fd.get('parentReference', {}).get('driveId', '') or fd.get('id', '')
+        folder_id = fd.get('id', '')
+
+        if not (drive_id and folder_id):
+            return {'success': False, 'error': 'تعذّر تحديد مجلد الرفع من الرابط المُعطى'}
+
+        # 2) رفع الملف داخل مجلد فرعي باسم كود الطالب، بنفس صلاحية الرابط
+        upload_url = (
+            f"https://graph.microsoft.com/v1.0"
+            f"/drives/{drive_id}/items/{folder_id}"
+            f":/{student_id}/{filename}:/content"
+        )
+
+        upload_resp = req.put(
+            upload_url,
+            headers={'Content-Type': 'application/octet-stream'},
+            data=file_bytes,
+            timeout=30
+        )
+
+        if upload_resp.status_code in (200, 201):
+            return {'success': True, 'web_url': upload_resp.json().get('webUrl', '')}
+        else:
+            return {'success': False, 'error': f'فشل الرفع: {upload_resp.status_code} — {upload_resp.text[:250]}'}
 
     except Exception as e:
         return {'success': False, 'error': str(e)}
