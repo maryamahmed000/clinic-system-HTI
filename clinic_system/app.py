@@ -594,7 +594,7 @@ def send_email_via_graph(to_emails, subject, html_body):
     if not access_token:
         return {'success': False, 'error': err}
 
-    CLINIC_EMAIL = os.environ.get('ONEDRIVE_EMAIL', '')
+    CLINIC_EMAIL = os.environ.get('CLINIC_EMAIL', '') or os.environ.get('ONEDRIVE_EMAIL', '')
 
     message = {
         "message": {
