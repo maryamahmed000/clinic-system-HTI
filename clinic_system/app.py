@@ -136,8 +136,9 @@ def init_db():
     # Add doctor_name to existing DBs that don't have it
     try:
         c.execute('ALTER TABLE visits ADD COLUMN doctor_name TEXT DEFAULT NULL')
-    except:
-        pass
+        conn.commit()
+    except Exception:
+        conn.rollback()
 
     c.execute('''CREATE TABLE IF NOT EXISTS affairs_reports (
         id              SERIAL PRIMARY KEY,
@@ -179,7 +180,9 @@ def init_db():
     for col, typedef in [('category','TEXT'), ('expiry_date','TEXT')]:
         try:
             c.execute(f"ALTER TABLE medicines ADD COLUMN {col} {typedef}")
-        except: pass
+            conn.commit()
+        except Exception:
+            conn.rollback()
 
     c.execute('''CREATE TABLE IF NOT EXISTS doctors (
         id       SERIAL PRIMARY KEY,
@@ -225,6 +228,7 @@ def init_db():
 
     conn.commit()
     conn.close()
+    print("✅ Database initialized successfully")
 
 # ─── Load Excel data ──────────────────────────────────────────
 def load_students():
