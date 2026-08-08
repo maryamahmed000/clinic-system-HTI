@@ -1,7 +1,8 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import hashlib
 import pandas as pd
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import os
 # Load OneDrive credentials from .env file if present (no extra library needed)
 def _load_env_file():
@@ -26,7 +27,6 @@ app.config['PERMANENT_SESSION_LIFETIME'] = 28800  # 8 hours
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 app.config['SESSION_PERMANENT'] = False
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH  = os.path.join(BASE_DIR, 'data', 'clinic.db')
 
 @app.template_filter('fromjson')
 def fromjson_filter(value):
@@ -38,9 +38,27 @@ def fromjson_filter(value):
 
 # ─── Database setup ──────────────────────────────────────────
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    DATABASE_URL = os.environ.get('DATABASE_URL', '')
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    conn.autocommit = False
     return conn
+
+
+def db_execute(conn, sql, params=None):
+    """Helper: execute SQL and return cursor."""
+    cur = conn.cursor()
+    cur.execute(sql, params or ())
+    return cur
+
+
+def db_fetchall(conn, sql, params=None):
+    cur = db_execute(conn, sql, params)
+    return cur.fetchall()
+
+
+def db_fetchone(conn, sql, params=None):
+    cur = db_execute(conn, sql, params)
+    return cur.fetchone()
 
 
 def _load_medicines_from_excel(cursor):
@@ -83,7 +101,7 @@ def _load_medicines_from_excel(cursor):
                 expiry = expiry.replace('None','').replace('_____','').strip()
                 cat = categorize(name)
                 cursor.execute(
-                    "INSERT INTO medicines(name,stock,unit,category,expiry_date) VALUES(?,?,?,?,?)",
+                    "INSERT INTO medicines(name,stock,unit,category,expiry_date) VALUES(%s,%s,%s,%s,%s)",
                     (name, 0, 'وحدة', cat, expiry if expiry else None)
                 )
     wb.close()
@@ -93,7 +111,7 @@ def init_db():
     c = conn.cursor()
 
     c.execute('''CREATE TABLE IF NOT EXISTS visits (
-        id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+        id                   SERIAL PRIMARY KEY,
         person_type          TEXT NOT NULL,
         person_id            TEXT NOT NULL,
         person_name          TEXT NOT NULL,
@@ -122,7 +140,7 @@ def init_db():
         pass
 
     c.execute('''CREATE TABLE IF NOT EXISTS affairs_reports (
-        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        id              SERIAL PRIMARY KEY,
         visit_id        INTEGER NOT NULL,
         report_number   TEXT,
         action_type     TEXT,
@@ -136,7 +154,7 @@ def init_db():
     )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS email_log (
-        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        id              SERIAL PRIMARY KEY,
         ar_id           INTEGER,
         visit_id        INTEGER,
         person_name     TEXT,
@@ -150,7 +168,7 @@ def init_db():
     )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS medicines (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        id          SERIAL PRIMARY KEY,
         name        TEXT NOT NULL,
         stock       INTEGER DEFAULT 0,
         unit        TEXT DEFAULT 'وحدة',
@@ -164,7 +182,7 @@ def init_db():
         except: pass
 
     c.execute('''CREATE TABLE IF NOT EXISTS doctors (
-        id       INTEGER PRIMARY KEY AUTOINCREMENT,
+        id       SERIAL PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         name     TEXT NOT NULL,
@@ -173,19 +191,19 @@ def init_db():
     
     # Seed doctors if empty
     c.execute("SELECT COUNT(*) FROM doctors")
-    if c.fetchone()[0] == 0:
+    if list(c.fetchone().values())[0] == 0:
         def h(p): return hashlib.sha256(p.encode()).hexdigest()
-        c.execute("INSERT INTO doctors (username,password,name) VALUES (?,?,?)", ('doctor1', h('doctor1'), 'د. أحمد سالم'))
-        c.execute("INSERT INTO doctors (username,password,name) VALUES (?,?,?)", ('doctor2', h('doctor2'), 'د. محمد إبراهيم'))
+        c.execute("INSERT INTO doctors (username,password,name) VALUES (%s,%s,%s)", ('doctor1', h('doctor1'), 'د. أحمد سالم'))
+        c.execute("INSERT INTO doctors (username,password,name) VALUES (%s,%s,%s)", ('doctor2', h('doctor2'), 'د. محمد إبراهيم'))
 
     # Load medicines from Excel if table is empty
     c.execute("SELECT COUNT(*) FROM medicines")
-    if c.fetchone()[0] == 0:
+    if list(c.fetchone().values())[0] == 0:
         _load_medicines_from_excel(c)
 
     # Create doctors table
     c.execute('''CREATE TABLE IF NOT EXISTS doctors (
-        id       INTEGER PRIMARY KEY AUTOINCREMENT,
+        id       SERIAL PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         name     TEXT NOT NULL,
@@ -202,10 +220,8 @@ def init_db():
         ('affairs',  hash_pw('affairs2024'), 'شئون الطلاب',       'affairs'),
         ('admin',    hash_pw('hti@admin2026'),   'المدير',             'admin'),
     ]
-    c.executemany(
-        "INSERT OR IGNORE INTO doctors(username,password,name,role) VALUES(?,?,?,?)",
-        doctors
-    )
+    for d in doctors:
+        c.execute("INSERT INTO doctors(username,password,name,role) VALUES(%s,%s,%s,%s) ON CONFLICT(username) DO NOTHING", d)
 
     conn.commit()
     conn.close()
@@ -258,10 +274,7 @@ def api_login():
     password = data.get('password','')
     hashed   = hashlib.sha256(password.encode()).hexdigest()
     conn = get_db()
-    user = conn.execute(
-        "SELECT * FROM doctors WHERE username=? AND password=?",
-        (username, hashed)
-    ).fetchone()
+    user = db_fetchone(conn, "SELECT * FROM doctors WHERE username=%s AND password=%s", (username, hashed))
     conn.close()
     if not user:
         return jsonify({'success': False})
@@ -291,9 +304,7 @@ def doctor_search():
         return redirect(url_for('affairs_home'))
     conn = get_db()
     today = date.today().isoformat()
-    today_visits = conn.execute(
-        "SELECT * FROM visits WHERE visit_date=? ORDER BY created_at DESC", (today,)
-    ).fetchall()
+    today_visits = db_fetchall(conn, "SELECT * FROM visits WHERE visit_date=%s ORDER BY created_at DESC", (today,))
     import pandas as pd, os
     try:
         df_emp = pd.read_excel(os.path.join(BASE_DIR, 'data', 'employees.xlsx'))
@@ -302,8 +313,8 @@ def doctor_search():
         emp_count = 142
     stats = {
         'today': len(today_visits),
-        'pending': conn.execute("SELECT COUNT(*) FROM visits WHERE submitted_to_affairs=0 AND leave_days>0").fetchone()[0],
-        'medicines_count': conn.execute("SELECT COUNT(*) FROM medicines").fetchone()[0],
+        'pending': db_fetchone(conn, "SELECT COUNT(*) FROM visits WHERE submitted_to_affairs=0 AND leave_days>0")['count'],
+        'medicines_count': db_fetchone(conn, "SELECT COUNT(*) FROM medicines")['count'],
         'employees_count': emp_count,
     }
     # Get current doctor name from session
@@ -351,10 +362,7 @@ def api_search():
 
         # Get visit history from DB
         conn = get_db()
-        visits = conn.execute(
-            "SELECT * FROM visits WHERE person_id=? ORDER BY visit_date DESC LIMIT 20",
-            (person_id,)
-        ).fetchall()
+        visits = db_fetchall(conn, "SELECT * FROM visits WHERE person_id=%s ORDER BY visit_date DESC LIMIT 20", (person_id,))
         conn.close()
 
         visits_list = []
@@ -444,7 +452,7 @@ def api_send_employee_email():
 @app.route('/api/medicines')
 def api_medicines():
     conn = get_db()
-    meds = conn.execute("SELECT * FROM medicines ORDER BY category, id").fetchall()
+    meds = db_fetchall(conn, "SELECT * FROM medicines ORDER BY category, id")
     conn.close()
     return jsonify([dict(m) for m in meds])
 
@@ -739,7 +747,8 @@ def api_save_visit():
              prescription, leave_days, leave_from, leave_to,
              is_chronic, report_reason, notes, certificate_name,
              submitted_to_affairs, doctor_name)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', (
+            VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id''', (
             data.get('person_type'),
             data.get('person_id'),
             data.get('person_name'),
@@ -759,11 +768,11 @@ def api_save_visit():
             0,
             doctor_name
         ))
-        visit_id = cur.lastrowid
+        visit_id = cur.fetchone()['id']
 
         # Deduct medicine stock
         for med_id in data.get('medicine_ids', []):
-            conn.execute("UPDATE medicines SET stock=stock-1 WHERE id=?", (med_id,))
+            db_execute(conn, "UPDATE medicines SET stock=stock-1 WHERE id=%s", (med_id,))
 
         conn.commit()
         conn.close()
@@ -775,7 +784,7 @@ def api_save_visit():
 @app.route('/api/submit_to_affairs/<int:visit_id>', methods=['POST'])
 def api_submit_to_affairs(visit_id):
     conn = get_db()
-    conn.execute("UPDATE visits SET submitted_to_affairs=1 WHERE id=?", (visit_id,))
+    db_execute(conn, "UPDATE visits SET submitted_to_affairs=1 WHERE id=%s", (visit_id,))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -789,16 +798,14 @@ def affairs_home():
     if session.get('role') not in ('affairs', 'admin'):
         return redirect(url_for('doctor_search'))
     conn = get_db()
-    reports = conn.execute('''
+    reports = db_fetchall(conn, '''
         SELECT v.*, ar.id as ar_id, ar.printed
         FROM visits v
         LEFT JOIN affairs_reports ar ON ar.visit_id = v.id
         WHERE v.submitted_to_affairs=1 AND v.person_type='student'
         ORDER BY v.created_at DESC
-    ''').fetchall()
-    new_count = conn.execute(
-        "SELECT COUNT(*) FROM visits v LEFT JOIN affairs_reports ar ON ar.visit_id=v.id WHERE v.submitted_to_affairs=1 AND v.person_type='student' AND ar.id IS NULL"
-    ).fetchone()[0]
+    ''')
+    new_count = db_fetchone(conn, "SELECT COUNT(*) FROM visits v LEFT JOIN affairs_reports ar ON ar.visit_id=v.id WHERE v.submitted_to_affairs=1 AND v.person_type='student' AND ar.id IS NULL")['count']
     reports_list = [dict(r) for r in reports]
 
     # لكل طالب في القائمة، اجمعي كل تاريخه (كل التقارير السابقة + الحالية)
@@ -806,13 +813,13 @@ def affairs_home():
     student_ids = list({r['person_id'] for r in reports_list})
     history_by_student = {}
     for sid in student_ids:
-        hist_rows = conn.execute('''
+        hist_rows = db_fetchall(conn, '''
             SELECT v.id as visit_id, v.visit_date, v.diagnosis, v.leave_days,
                    v.leave_from, v.leave_to, v.doctor_name, v.report_reason,
                    v.is_chronic, ar.report_number, ar.id as ar_id
             FROM visits v
             LEFT JOIN affairs_reports ar ON ar.visit_id = v.id
-            WHERE v.person_id=? AND v.person_type='student' AND v.submitted_to_affairs=1
+            WHERE v.person_id=%s AND v.person_type='student' AND v.submitted_to_affairs=1
             ORDER BY v.visit_date DESC
         ''', (sid,)).fetchall()
         history_by_student[sid] = [dict(h) for h in hist_rows]
@@ -827,19 +834,19 @@ def api_create_affairs_report():
     conn = get_db()
     visit_id = data.get('visit_id')
     # Check if report already exists for this visit
-    existing = conn.execute("SELECT id, report_number FROM affairs_reports WHERE visit_id=?", (visit_id,)).fetchone()
+    existing = db_fetchone(conn, "SELECT id, report_number FROM affairs_reports WHERE visit_id=?", (visit_id,))
     if existing:
         conn.close()
         return jsonify({'success': True, 'report_number': existing['report_number'], 'ar_id': existing['id'], 'duplicate': True})
     # Auto generate report number
-    count = conn.execute("SELECT COUNT(*) FROM affairs_reports").fetchone()[0]
+    count = db_fetchone(conn, "SELECT COUNT(*) FROM affairs_reports")['count']
     report_number = f"RPT-{datetime.now().year}-{str(count+1).zfill(3)}"
     try:
         cur2 = conn.cursor()
         cur2.execute('''INSERT INTO affairs_reports
             (visit_id, report_number, action_type, leave_from, leave_to,
              leave_days, affairs_notes, printed)
-            VALUES(?,?,?,?,?,?,?,0)''', (
+            VALUES(%s,%s,%s,%s,%s,%s,%s,0)''', (
             visit_id,
             report_number,
             data.get('action_type', 'رفع غياب — إجازة مرضية'),
@@ -859,7 +866,7 @@ def api_create_affairs_report():
 @app.route('/api/print_report/<int:ar_id>', methods=['POST'])
 def api_print_report(ar_id):
     conn = get_db()
-    conn.execute("UPDATE affairs_reports SET printed=1 WHERE id=?", (ar_id,))
+    db_execute(conn, "UPDATE affairs_reports SET printed=1 WHERE id=%s", (ar_id,))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -869,10 +876,10 @@ def api_stats():
     conn = get_db()
     today = date.today().isoformat()
     stats = {
-        'today_visits': conn.execute("SELECT COUNT(*) FROM visits WHERE visit_date=?", (today,)).fetchone()[0],
-        'pending_submit': conn.execute("SELECT COUNT(*) FROM visits WHERE submitted_to_affairs=0 AND leave_days>0").fetchone()[0],
-        'affairs_new': conn.execute("SELECT COUNT(*) FROM visits v LEFT JOIN affairs_reports ar ON ar.visit_id=v.id WHERE v.submitted_to_affairs=1 AND ar.id IS NULL").fetchone()[0],
-        'total_visits': conn.execute("SELECT COUNT(*) FROM visits").fetchone()[0],
+        'today_visits': db_fetchone(conn, "SELECT COUNT(*) FROM visits WHERE visit_date=?", (today,))['count'],
+        'pending_submit': db_fetchone(conn, "SELECT COUNT(*) FROM visits WHERE submitted_to_affairs=0 AND leave_days>0")['count'],
+        'affairs_new': db_fetchone(conn, "SELECT COUNT(*) FROM visits v LEFT JOIN affairs_reports ar ON ar.visit_id=v.id WHERE v.submitted_to_affairs=1 AND ar.id IS NULL")['count'],
+        'total_visits': db_fetchone(conn, "SELECT COUNT(*) FROM visits")['count'],
     }
     conn.close()
     return jsonify(stats)
@@ -887,13 +894,13 @@ def affairs_archive():
         return redirect(url_for('doctor_search'))
     conn = get_db()
     # Show all completed reports (students only)
-    reports = conn.execute('''
+    reports = db_fetchone(conn, '''
         SELECT v.*, ar.id as ar_id, ar.report_number, ar.printed, ar.created_at as ar_date
         FROM visits v
         JOIN affairs_reports ar ON ar.visit_id = v.id
         WHERE v.person_type='student'
         ORDER BY ar.created_at DESC
-    ''').fetchall()
+    ''')
     conn.close()
     return render_template('affairs_archive.html', reports=reports)
 
@@ -905,7 +912,7 @@ def print_report(visit_id):
     if 'user' not in session:
         return redirect(url_for('login_page'))
     conn = get_db()
-    visit = conn.execute("SELECT * FROM visits WHERE id=?", (visit_id,)).fetchone()
+    visit = db_execute(conn, "SELECT * FROM visits WHERE id=%s", (visit_id,)).fetchone()
     conn.close()
     if not visit:
         return "زيارة غير موجودة", 404
@@ -916,12 +923,12 @@ def print_affairs_report(ar_id):
     if 'user' not in session:
         return redirect(url_for('login_page'))
     conn = get_db()
-    report = conn.execute("SELECT * FROM affairs_reports WHERE id=?", (ar_id,)).fetchone()
+    report = db_execute(conn, "SELECT * FROM affairs_reports WHERE id=%s", (ar_id,)).fetchone()
     if not report:
         conn.close()
         return "تقرير غير موجود", 404
     # Get all visits linked to this report (usually one, but can be batch)
-    visit = conn.execute("SELECT * FROM visits WHERE id=?", (dict(report)['visit_id'],)).fetchone()
+    visit = db_execute(conn, "SELECT * FROM visits WHERE id=%s", (dict(report)['visit_id'],)).fetchone()
     conn.close()
     visits = [dict(visit)] if visit else []
     return render_template('print_affairs.html', report=dict(report), visits=visits)
@@ -935,7 +942,7 @@ def affairs_archive_export():
         return redirect(url_for('doctor_search'))
     import io
     conn = get_db()
-    reports = conn.execute('''
+    reports = db_fetchall(conn, '''
         SELECT v.person_id, v.person_name, v.department, v.diagnosis,
                v.leave_days, v.leave_from, v.leave_to, v.doctor_name,
                v.visit_date, ar.report_number, ar.action_type, ar.created_at
@@ -943,7 +950,7 @@ def affairs_archive_export():
         JOIN affairs_reports ar ON ar.visit_id = v.id
         WHERE v.person_type='student'
         ORDER BY ar.created_at DESC
-    ''').fetchall()
+    ''')
     conn.close()
 
     import pandas as pd
@@ -1008,14 +1015,14 @@ def send_report_email():
             pass
 
     conn = get_db()
-    report = conn.execute('''
+    report = db_execute(conn, '''
         SELECT ar.*, v.person_name, v.person_id, v.department,
                v.diagnosis, v.leave_days, v.leave_from, v.leave_to,
                v.doctor_name, v.visit_date, v.report_reason
         FROM affairs_reports ar
         JOIN visits v ON v.id = ar.visit_id
-        WHERE ar.id=?
-    ''', (ar_id,)).fetchone()
+        WHERE ar.id=%s
+    ''', (ar_id,))
     conn.close()
 
     if not report:
@@ -1072,10 +1079,10 @@ def send_report_email():
 
     # سجّل المحاولة (نجحت أو فشلت) في سجل الإيميلات لعرضها في صفحة الإدارة
     log_conn = get_db()
-    log_conn.execute('''INSERT INTO email_log
+    log_db_execute(conn, '''INSERT INTO email_log
         (ar_id, visit_id, person_name, person_id, report_number,
          to_emails, sent_by, status, error_message)
-        VALUES(?,?,?,?,?,?,?,?,?)''', (
+        VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)''', (
         ar_id,
         r.get('visit_id'),
         r['person_name'],
@@ -1105,18 +1112,14 @@ def admin_home():
             return redirect(url_for('affairs_home'))
         return redirect(url_for('doctor_search'))
     conn = get_db()
-    visits = conn.execute(
-        "SELECT * FROM visits ORDER BY created_at DESC"
-    ).fetchall()
-    email_logs = conn.execute(
-        "SELECT * FROM email_log ORDER BY sent_at DESC LIMIT 100"
-    ).fetchall()
+    visits = db_fetchall(conn, "SELECT * FROM visits ORDER BY created_at DESC")
+    email_logs = db_fetchall(conn, "SELECT * FROM email_log ORDER BY sent_at DESC LIMIT 100")
     stats = {
-        'total_visits':   conn.execute("SELECT COUNT(*) FROM visits").fetchone()[0],
-        'submitted':      conn.execute("SELECT COUNT(*) FROM visits WHERE submitted_to_affairs=1").fetchone()[0],
-        'affairs_reports':conn.execute("SELECT COUNT(*) FROM affairs_reports").fetchone()[0],
-        'medicines':      conn.execute("SELECT COUNT(*) FROM medicines").fetchone()[0],
-        'emails_sent':    conn.execute("SELECT COUNT(*) FROM email_log WHERE status='success'").fetchone()[0],
+        'total_visits':   db_fetchone(conn, "SELECT COUNT(*) FROM visits")['count'],
+        'submitted':      db_fetchone(conn, "SELECT COUNT(*) FROM visits WHERE submitted_to_affairs=1")['count'],
+        'affairs_reports':db_fetchone(conn, "SELECT COUNT(*) FROM affairs_reports")['count'],
+        'medicines':      db_fetchone(conn, "SELECT COUNT(*) FROM medicines")['count'],
+        'emails_sent':    db_fetchone(conn, "SELECT COUNT(*) FROM email_log WHERE status='success'")['count'],
     }
     conn.close()
     return render_template('admin.html', visits=visits, stats=stats, email_logs=email_logs)
@@ -1127,8 +1130,8 @@ def admin_delete_visit(visit_id):
     conn = get_db()
     try:
         # Delete related affairs reports first
-        conn.execute("DELETE FROM affairs_reports WHERE visit_id=?", (visit_id,))
-        conn.execute("DELETE FROM visits WHERE id=?", (visit_id,))
+        db_execute(conn, "DELETE FROM affairs_reports WHERE visit_id=?", (visit_id,))
+        db_execute(conn, "DELETE FROM visits WHERE id=%s", (visit_id,))
         conn.commit()
         conn.close()
         return jsonify({'success': True})
@@ -1146,8 +1149,8 @@ def admin_delete_visits_bulk():
     conn = get_db()
     try:
         placeholders = ','.join('?' * len(ids))
-        conn.execute(f"DELETE FROM affairs_reports WHERE visit_id IN ({placeholders})", ids)
-        conn.execute(f"DELETE FROM visits WHERE id IN ({placeholders})", ids)
+        db_execute(conn, f"DELETE FROM affairs_reports WHERE visit_id IN ({placeholders})", ids)
+        db_execute(conn, f"DELETE FROM visits WHERE id IN ({placeholders})", ids)
         conn.commit()
         conn.close()
         return jsonify({'success': True, 'deleted': len(ids)})
@@ -1158,8 +1161,8 @@ def admin_delete_visits_bulk():
 @app.route('/admin/reset', methods=['GET'])
 def admin_reset():
     conn = get_db()
-    conn.execute("DELETE FROM affairs_reports")
-    conn.execute("DELETE FROM visits")
+    db_execute(conn, "DELETE FROM affairs_reports")
+    db_execute(conn, "DELETE FROM visits")
     conn.commit()
     conn.close()
     return redirect(url_for('admin_home'))
