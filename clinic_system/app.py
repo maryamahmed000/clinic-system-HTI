@@ -825,7 +825,7 @@ def affairs_home():
             LEFT JOIN affairs_reports ar ON ar.visit_id = v.id
             WHERE v.person_id=%s AND v.person_type='student' AND v.submitted_to_affairs=1
             ORDER BY v.visit_date DESC
-        ''', (sid,)).fetchall()
+        ''', (sid,))
         history_by_student[sid] = [dict(h) for h in hist_rows]
 
     conn.close()
@@ -838,7 +838,7 @@ def api_create_affairs_report():
     conn = get_db()
     visit_id = data.get('visit_id')
     # Check if report already exists for this visit
-    existing = db_fetchone(conn, "SELECT id, report_number FROM affairs_reports WHERE visit_id=?", (visit_id,))
+    existing = db_fetchone(conn, "SELECT id, report_number FROM affairs_reports WHERE visit_id=%s", (visit_id,))
     if existing:
         conn.close()
         return jsonify({'success': True, 'report_number': existing['report_number'], 'ar_id': existing['id'], 'duplicate': True})
@@ -880,7 +880,7 @@ def api_stats():
     conn = get_db()
     today = date.today().isoformat()
     stats = {
-        'today_visits': db_fetchone(conn, "SELECT COUNT(*) FROM visits WHERE visit_date=?", (today,))['count'],
+        'today_visits': db_fetchone(conn, "SELECT COUNT(*) FROM visits WHERE visit_date=%s", (today,))['count'],
         'pending_submit': db_fetchone(conn, "SELECT COUNT(*) FROM visits WHERE submitted_to_affairs=0 AND leave_days>0")['count'],
         'affairs_new': db_fetchone(conn, "SELECT COUNT(*) FROM visits v LEFT JOIN affairs_reports ar ON ar.visit_id=v.id WHERE v.submitted_to_affairs=1 AND ar.id IS NULL")['count'],
         'total_visits': db_fetchone(conn, "SELECT COUNT(*) FROM visits")['count'],
@@ -898,7 +898,7 @@ def affairs_archive():
         return redirect(url_for('doctor_search'))
     conn = get_db()
     # Show all completed reports (students only)
-    reports = db_fetchone(conn, '''
+    reports = db_fetchall(conn, '''
         SELECT v.*, ar.id as ar_id, ar.report_number, ar.printed, ar.created_at as ar_date
         FROM visits v
         JOIN affairs_reports ar ON ar.visit_id = v.id
@@ -916,7 +916,7 @@ def print_report(visit_id):
     if 'user' not in session:
         return redirect(url_for('login_page'))
     conn = get_db()
-    visit = db_execute(conn, "SELECT * FROM visits WHERE id=%s", (visit_id,)).fetchone()
+    visit = db_fetchone(conn, "SELECT * FROM visits WHERE id=%s", (visit_id,))
     conn.close()
     if not visit:
         return "زيارة غير موجودة", 404
@@ -927,12 +927,12 @@ def print_affairs_report(ar_id):
     if 'user' not in session:
         return redirect(url_for('login_page'))
     conn = get_db()
-    report = db_execute(conn, "SELECT * FROM affairs_reports WHERE id=%s", (ar_id,)).fetchone()
+    report = db_fetchone(conn, "SELECT * FROM affairs_reports WHERE id=%s", (ar_id,))
     if not report:
         conn.close()
         return "تقرير غير موجود", 404
     # Get all visits linked to this report (usually one, but can be batch)
-    visit = db_execute(conn, "SELECT * FROM visits WHERE id=%s", (dict(report)['visit_id'],)).fetchone()
+    visit = db_fetchone(conn, "SELECT * FROM visits WHERE id=%s", (dict(report)['visit_id'],))
     conn.close()
     visits = [dict(visit)] if visit else []
     return render_template('print_affairs.html', report=dict(report), visits=visits)
