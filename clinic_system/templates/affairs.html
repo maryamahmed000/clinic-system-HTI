@@ -56,8 +56,6 @@ body{display:flex;min-height:100vh;}
 .confirm-banner{padding:10px 14px;background:var(--green-light);border:1.5px solid #A7F3D0;border-radius:8px;color:var(--green);font-size:13px;margin-top:12px;display:none;font-weight:700;}
 .placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--text-muted);text-align:center;border:1.5px solid var(--border);border-radius:16px;background:#fff;}
 .rp{display:flex;flex-direction:column;gap:14px;}
-
-/* Email Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:center;justify-content:center;}
 .modal-overlay.open{display:flex;}
 .email-modal{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,.2);}
@@ -66,8 +64,6 @@ body{display:flex;min-height:100vh;}
 .email-tag button{background:none;border:none;color:#DC2626;cursor:pointer;font-size:14px;padding:0;line-height:1;}
 .email-tags-wrap{min-height:44px;border:1.5px solid #D8E2EF;border-radius:9px;padding:6px 10px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:12px;background:#F7F9FC;cursor:text;}
 .email-tags-wrap input{border:none;outline:none;background:transparent;font-size:14px;color:#1A2744;min-width:160px;flex:1;font-family:inherit;padding:3px 0;}
-.pass-field{width:100%;background:#F7F9FC;border:1.5px solid #D8E2EF;border-radius:9px;padding:10px 14px;font-size:14px;color:#1A2744;outline:none;font-family:inherit;margin-bottom:12px;}
-.pass-field:focus{border-color:#1B3A6B;}
 .note-field{width:100%;background:#F7F9FC;border:1.5px solid #D8E2EF;border-radius:9px;padding:10px 14px;font-size:14px;color:#1A2744;outline:none;font-family:inherit;resize:vertical;min-height:70px;margin-bottom:16px;}
 .send-btn{width:100%;padding:13px;background:linear-gradient(135deg,#1B3A6B,#2D5EA8);color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 3px 12px rgba(27,58,107,.3);}
 .send-btn:hover{transform:translateY(-1px);}
@@ -80,7 +76,6 @@ body{display:flex;min-height:100vh;}
 .quick-label{font-size:12px;color:#4A5878;font-weight:700;margin-bottom:6px;}
 .qe-btn{padding:5px 12px;border-radius:16px;border:1.5px solid #D8E2EF;background:#F7F9FC;font-size:12px;color:#1B3A6B;cursor:pointer;font-family:inherit;font-weight:600;margin:2px;transition:all .15s;}
 .qe-btn:hover{background:#EBF1FA;border-color:#1B3A6B;}
-
 </style>
 </head>
 <body>
@@ -176,13 +171,11 @@ body{display:flex;min-height:100vh;}
           <div class="ref-row"><span class="rk">الطبيب المعالج</span><span class="rv doc" id="rp-doctor">{{ r.doctor_name or "—" }}</span></div>
         </div>
 
-        <!-- تاريخ الطالب الكامل — كل المرات اللي سبق وعمل فيها تقرير -->
         <div class="card" style="background:#fff;border:1.5px solid var(--border);border-right:4px solid var(--amber);border-radius:12px;padding:16px;box-shadow:var(--shadow-sm);">
-          <div class="ref-title" style="color:var(--amber);">
-            🕓 تاريخ الطالب — كل التقارير السابقة
-          </div>
+          <div class="ref-title" style="color:var(--amber);">🕓 تاريخ الطالب — كل التقارير السابقة</div>
           <div id="student-history-list" style="max-height:280px;overflow-y:auto;"></div>
         </div>
+
         {% if is_new %}
         <div class="form-card" id="new-report-form">
           <div class="form-title">📝 إنشاء التقرير الرسمي</div>
@@ -196,11 +189,12 @@ body{display:flex;min-height:100vh;}
           </div>
           <div class="row-2">
             <div class="fg"><label class="lbl">من تاريخ</label><input class="field" id="af-from" type="date" value="{{ r.leave_from or r.visit_date }}"></div>
-            <div class="fg"><label class="lbl">إلى تاريخ</label><input class="field" id="af-to" type="date" value="{{ r.leave_to or "" }}"></div>
+            <div class="fg"><label class="lbl">إلى تاريخ</label><input class="field" id="af-to" type="date" value="{{ r.leave_to or '' }}"></div>
           </div>
           <div class="fg"><label class="lbl">ملاحظات شئون</label><input class="field" id="affairs-notes" placeholder="أي ملاحظات إدارية..."></div>
         </div>
         {% endif %}
+
         <div class="prev-card">
           <div class="prev-head">
             <div class="prev-uni">المعهد التكنولوجي العالي — شئون الطلاب</div>
@@ -219,6 +213,7 @@ body{display:flex;min-height:100vh;}
             <div class="sig-box"><div class="sig-line"></div><div class="sig-lbl">الختم</div></div>
           </div>
         </div>
+
         <div class="btn-row">
           <button class="btn-prev2" onclick="doPrint()">🖨️ طباعة</button>
           <button class="btn-prev2" onclick="openEmailModal()" style="background:var(--blue-light);border-color:#BFDBFE;color:#1B3A6B;">📧 إرسال بالإيميل</button>
@@ -233,6 +228,32 @@ body{display:flex;min-height:100vh;}
         </div>
       {% endif %}
     </div>
+  </div>
+</div>
+
+<!-- Email Modal — يجب أن يكون قبل الـ script -->
+<div class="modal-overlay" id="email-modal">
+  <div class="email-modal">
+    <div class="modal-title">📧 إرسال التقرير بالإيميل</div>
+    <div class="quick-emails">
+      <div class="quick-label">إضافة سريعة:</div>
+      <button class="qe-btn" onclick="addQuickEmail('student')">🎓 إيميل الطالب</button>
+      <button class="qe-btn" onclick="addQuickEmail('dept')">🏛️ رئيس القسم</button>
+      <button class="qe-btn" onclick="addQuickEmail('control')">📋 رئيس الكنترول</button>
+    </div>
+    <div class="quick-label">إيميلات الاستلام (@hti-o.edu.eg):</div>
+    <div class="email-tags-wrap" id="email-tags-wrap" onclick="document.getElementById('email-input').focus()">
+      <input id="email-input" type="email" placeholder="اكتب الإيميل واضغط Enter أو فاصلة..."
+             onkeydown="handleEmailKey(event)" oninput="this.size=Math.max(20,this.value.length)">
+    </div>
+    <div style="background:#D1FAE5;border:1px solid #A7F3D0;border-radius:8px;padding:8px 12px;font-size:12px;color:#065F46;margin-bottom:14px;line-height:1.6;">
+      ✅ الإرسال بيتم تلقائياً من إيميل الشئون — لا حاجة لكتابة كلمة مرور.
+    </div>
+    <div class="quick-label">ملاحظة إضافية (اختياري):</div>
+    <textarea class="note-field" id="email-note" placeholder="أي ملاحظة تضاف للإيميل..."></textarea>
+    <button class="send-btn" id="send-email-btn" onclick="sendEmail()">📤 إرسال الإيميل</button>
+    <button class="cancel-btn" onclick="closeEmailModal()">إلغاء</button>
+    <div class="email-result" id="email-result"></div>
   </div>
 </div>
 
@@ -265,8 +286,7 @@ function renderStudentHistory(personId, currentVisitId){
           ${statusBadge}
         </div>
         ${h.doctor_name ? `<div style="font-size:11px;color:var(--purple);margin-top:4px;">🩺 ${h.doctor_name}</div>` : ''}
-      </div>
-    `;
+      </div>`;
   }).join('');
 }
 
@@ -300,6 +320,7 @@ function selectReport(id,el){
   if(document.getElementById("af-to")&&r.leave_to)document.getElementById("af-to").value=r.leave_to;
   document.getElementById("prev-num").textContent=r.ar_id?"RPT-"+r.ar_id:"في انتظار الإنشاء";
 }
+
 async function createReport(){
   const vid=document.getElementById("curr-visit-id")?.value;
   if(!vid)return;
@@ -321,8 +342,22 @@ async function createReport(){
     if(tags&&!tags.innerHTML.includes('تم ✓'))tags.innerHTML+='<span class="tag t-green">تم ✓</span>';
   }
 }
-function filterR(status,btn){document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));btn.classList.add("active");document.querySelectorAll("#ri-list .ri").forEach(r=>{r.style.display=(status==="all"||r.dataset.status===status)?"":"none";});}
-function doPrint(){const selRi=document.querySelector(".ri.sel");if(!selRi)return;const id=parseInt(selRi.id.replace("ri-",""));const r=allReports.find(x=>x.id===id);if(!r)return;if(r.ar_id){window.open("/print/affairs/"+r.ar_id,"_blank");}else{window.open("/print/report/"+r.id,"_blank");}}
+
+function filterR(status,btn){
+  document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  document.querySelectorAll("#ri-list .ri").forEach(r=>{r.style.display=(status==="all"||r.dataset.status===status)?"":"none";});
+}
+
+function doPrint(){
+  const selRi=document.querySelector(".ri.sel");
+  if(!selRi)return;
+  const id=parseInt(selRi.id.replace("ri-",""));
+  const r=allReports.find(x=>x.id===id);
+  if(!r)return;
+  if(r.ar_id){window.open("/print/affairs/"+r.ar_id,"_blank");}
+  else{window.open("/print/report/"+r.id,"_blank");}
+}
 
 // ── EMAIL ──────────────────────────────────────────────
 let emailList = [];
@@ -352,20 +387,18 @@ function closeEmailModal() {
 }
 
 function addQuickEmail(type) {
-  const map = {
-    student: 'student@hti-o.edu.eg',
-    dept: 'dept_head@hti-o.edu.eg',
-    control: 'control@hti-o.edu.eg'
-  };
   const labels = {
     student: 'أدخل إيميل الطالب:',
     dept: 'أدخل إيميل رئيس القسم:',
     control: 'أدخل إيميل رئيس الكنترول:'
   };
-  const email = prompt(labels[type], map[type]);
-  if (email && email.includes('@')) {
-    addEmail(email.trim());
-  }
+  const defaults = {
+    student: '@hti-o.edu.eg',
+    dept: '@hti-o.edu.eg',
+    control: '@hti-o.edu.eg'
+  };
+  const email = prompt(labels[type], defaults[type]);
+  if (email && email.includes('@')) addEmail(email.trim());
 }
 
 function handleEmailKey(e) {
@@ -373,27 +406,19 @@ function handleEmailKey(e) {
   const val = input.value.trim();
   if ((e.key === 'Enter' || e.key === ',' || e.key === ' ') && val) {
     e.preventDefault();
-    if (val.includes('@')) {
-      addEmail(val.replace(',', '').trim());
-      input.value = '';
-    }
+    if (val.includes('@')) { addEmail(val.replace(',', '').trim()); input.value = ''; }
   }
   if (e.key === 'Backspace' && !input.value && emailList.length) {
-    emailList.pop();
-    renderEmailTags();
+    emailList.pop(); renderEmailTags();
   }
 }
 
 function addEmail(email) {
-  if (!emailList.includes(email)) {
-    emailList.push(email);
-    renderEmailTags();
-  }
+  if (!emailList.includes(email)) { emailList.push(email); renderEmailTags(); }
 }
 
 function removeEmail(idx) {
-  emailList.splice(idx, 1);
-  renderEmailTags();
+  emailList.splice(idx, 1); renderEmailTags();
 }
 
 function renderEmailTags() {
@@ -409,44 +434,28 @@ function renderEmailTags() {
 }
 
 async function sendEmail() {
-  // Check any remaining input
   const inputVal = document.getElementById('email-input').value.trim();
   if (inputVal && inputVal.includes('@')) addEmail(inputVal);
   document.getElementById('email-input').value = '';
-
-  if (!emailList.length) {
-    showEmailResult('أضف إيميل واحد على الأقل', false);
-    return;
-  }
-
+  if (!emailList.length) { showEmailResult('أضف إيميل واحد على الأقل', false); return; }
   const btn = document.getElementById('send-email-btn');
-  btn.disabled = true;
-  btn.textContent = '⏳ جاري الإرسال...';
-
+  btn.disabled = true; btn.textContent = '⏳ جاري الإرسال...';
   try {
     const res = await fetch('/api/send_report_email', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        ar_id: currentArId,
-        to_emails: emailList,
-        note: document.getElementById('email-note').value
-      })
+      method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin',
+      body: JSON.stringify({ ar_id: currentArId, to_emails: emailList, note: document.getElementById('email-note').value })
     });
     const data = await res.json();
     if (data.success) {
       showEmailResult(`✅ تم الإرسال بنجاح إلى ${emailList.join('، ')}`, true);
-      emailList = [];
-      renderEmailTags();
+      emailList = []; renderEmailTags();
     } else {
       showEmailResult('❌ ' + (data.error || 'خطأ في الإرسال'), false);
     }
   } catch(err) {
     showEmailResult('❌ خطأ في الاتصال: ' + err.message, false);
   } finally {
-    btn.disabled = false;
-    btn.textContent = '📤 إرسال الإيميل';
+    btn.disabled = false; btn.textContent = '📤 إرسال الإيميل';
   }
 }
 
@@ -457,51 +466,14 @@ function showEmailResult(msg, ok) {
   el.style.display = 'block';
 }
 
-// Close modal on overlay click
+// ✅ الـ Modal موجود الآن في الـ HTML قبل الـ script — addEventListener آمن
 document.getElementById('email-modal').addEventListener('click', function(e) {
   if (e.target === this) closeEmailModal();
 });
 
-// عرض تاريخ الطالب الكامل للتقرير المختار افتراضياً عند فتح الصفحة
 if (allReports.length > 0) {
   renderStudentHistory(allReports[0].person_id, allReports[0].id);
 }
-
 </script>
-
-<!-- Email Modal -->
-<div class="modal-overlay" id="email-modal">
-  <div class="email-modal">
-    <div class="modal-title">📧 إرسال التقرير بالإيميل</div>
-
-    <!-- Quick add buttons -->
-    <div class="quick-emails">
-      <div class="quick-label">إضافة سريعة:</div>
-      <button class="qe-btn" onclick="addQuickEmail('student')">🎓 إيميل الطالب</button>
-      <button class="qe-btn" onclick="addQuickEmail('dept')">🏛️ رئيس القسم</button>
-      <button class="qe-btn" onclick="addQuickEmail('control')">📋 رئيس الكنترول</button>
-    </div>
-
-    <!-- Email tags input -->
-    <div class="quick-label">إيميلات الاستلام (@hti-o.edu.eg):</div>
-    <div class="email-tags-wrap" id="email-tags-wrap" onclick="document.getElementById('email-input').focus()">
-      <input id="email-input" type="email" placeholder="اكتب الإيميل واضغط Enter أو فاصلة..."
-             onkeydown="handleEmailKey(event)" oninput="this.size=Math.max(20,this.value.length)">
-    </div>
-
-    <div style="background:#D1FAE5;border:1px solid #A7F3D0;border-radius:8px;padding:8px 12px;font-size:12px;color:#065F46;margin-bottom:14px;line-height:1.6;">
-      ✅ الإرسال بيتم تلقائياً من إيميل الشئون — لا حاجة لكتابة كلمة مرور.
-    </div>
-
-    <!-- Note -->
-    <div class="quick-label">ملاحظة إضافية (اختياري):</div>
-    <textarea class="note-field" id="email-note" placeholder="أي ملاحظة تضاف للإيميل..."></textarea>
-
-    <button class="send-btn" id="send-email-btn" onclick="sendEmail()">📤 إرسال الإيميل</button>
-    <button class="cancel-btn" onclick="closeEmailModal()">إلغاء</button>
-    <div class="email-result" id="email-result"></div>
-  </div>
-</div>
-
 </body>
 </html>
