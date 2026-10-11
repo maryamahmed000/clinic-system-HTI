@@ -1019,7 +1019,7 @@ def send_report_email():
             pass
 
     conn = get_db()
-    report = db_execute(conn, '''
+    report = db_fetchone(conn, '''
         SELECT ar.*, v.person_name, v.person_id, v.department,
                v.diagnosis, v.leave_days, v.leave_from, v.leave_to,
                v.doctor_name, v.visit_date, v.report_reason
@@ -1082,23 +1082,26 @@ def send_report_email():
     result = send_email_via_graph(to_emails, subject, html_body)
 
     # سجّل المحاولة (نجحت أو فشلت) في سجل الإيميلات لعرضها في صفحة الإدارة
-    log_conn = get_db()
-    log_db_execute(conn, '''INSERT INTO email_log
-        (ar_id, visit_id, person_name, person_id, report_number,
-         to_emails, sent_by, status, error_message)
-        VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)''', (
-        ar_id,
-        r.get('visit_id'),
-        r['person_name'],
-        r['person_id'],
-        r['report_number'],
-        json.dumps(to_emails, ensure_ascii=False),
-        session.get('user', 'غير معروف'),
-        'success' if result.get('success') else 'failed',
-        None if result.get('success') else result.get('error', 'خطأ غير معروف')
-    ))
-    log_conn.commit()
-    log_conn.close()
+    try:
+        log_conn = get_db()
+        db_execute(log_conn, '''INSERT INTO email_log
+            (ar_id, visit_id, person_name, person_id, report_number,
+             to_emails, sent_by, status, error_message)
+            VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)''', (
+            ar_id,
+            r.get('visit_id'),
+            r['person_name'],
+            r['person_id'],
+            r['report_number'],
+            json.dumps(to_emails, ensure_ascii=False),
+            session.get('user', 'غير معروف'),
+            'success' if result.get('success') else 'failed',
+            None if result.get('success') else result.get('error', 'خطأ غير معروف')
+        ))
+        log_conn.commit()
+        log_conn.close()
+    except Exception:
+        pass
 
     if result.get('success'):
         return jsonify({'success': True, 'sent_to': to_emails})
